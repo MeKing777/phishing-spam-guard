@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Set up Alerter</title>
+    <style>
+      :root{font:15px/1.55 system-ui,"Segoe UI",sans-serif;color:#18263b;background:#f2f6fc}*{box-sizing:border-box}
+      body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px}main{width:min(820px,100%);padding:clamp(22px,5vw,42px);border:1px solid #e1e9f4;border-radius:24px;background:#fff;box-shadow:0 18px 55px #19345c12}
+      .mark{width:52px;height:52px;display:grid;place-items:center;border-radius:16px;background:#eaf1ff}.mark img{width:40px;height:40px}.eyebrow{margin:20px 0 4px;color:#5577ad;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+      h1{margin:0;color:#1d3454;font-size:clamp(27px,5vw,38px);line-height:1.15;letter-spacing:-.035em}.intro{max-width:670px;margin:12px 0 24px;color:#63748d}
+      .section-title{margin:23px 0 8px;color:#324865;font-size:14px}.steps{display:grid;gap:11px;padding:0;list-style:none;counter-reset:step}.steps li{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:start;padding:15px;border:1px solid #e7edf5;border-radius:13px;background:#fbfcfe;counter-increment:step}.steps li::before{content:counter(step);width:25px;height:25px;display:grid;place-items:center;border-radius:50%;background:#e8efff;color:#2458aa;font-size:12px;font-weight:800}
+      .steps strong{display:block;color:#253b59;font-size:14px}.steps span{display:block;margin-top:3px;color:#6d7b90;font-size:13px}code{padding:2px 5px;border-radius:5px;background:#eef2f7;color:#34445c;font-size:12px;overflow-wrap:anywhere}
+      .paths{display:grid;grid-template-columns:1fr 1fr;gap:10px}.path{padding:13px;border:1px solid #e5ebf4;border-radius:12px;background:#fbfcfe}.path b{display:block;color:#344a68;font-size:12px}.path code{display:block;margin-top:7px;line-height:1.55}
+      .privacy{margin-top:18px;padding:13px 15px;border-radius:12px;background:#f1f6ff;color:#516683;font-size:12px}.bottom{margin:20px 0 0;padding-top:15px;border-top:1px solid #edf0f5;color:#718097;font-size:12px}
+      @media(max-width:580px){body{padding:12px}.paths{grid-template-columns:1fr}.steps li{padding:12px}}
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark"><img src="icons/alerter-48.png" alt="Alerter shield"></div>
+      <p class="eyebrow">Local browser protection</p>
+      <h1>Set up Alerter</h1>
+      <p class="intro">Alerter adds phishing and spam checks to your regular desktop browser. It scans web page links and up to 12 visible Gmail inbox previews in the background, plus open messages in Gmail or Outlook. You can also ask it to read and check text in the currently visible tab. Its Python checker and optional screen OCR run on this computer.</p>
+
+      <h2 class="section-title">1. Start the local checker</h2>
+      <ol class="steps">
+        <li><div><strong>Run the checker</strong><span>Double-click <code>start_alerter_checker.bat</code> in the project folder. Keep its window open while browsing. Screen scanning also needs Tesseract OCR installed; Alerter looks in the standard Windows installation folder.</span></div></li>
+        <li><div><strong>Open your browser's extension page</strong><span>Chrome: <code>chrome://extensions</code> · Edge: <code>edge://extensions</code> · Brave: <code>brave://extensions</code> · Firefox: <code>about:debugging#/runtime/this-firefox</code></span></div></li>
+        <li><div><strong>Load Alerter</strong><span>For Chrome, Edge, Brave, or Opera, enable Developer mode and choose <b>Load unpacked</b>. For Firefox, choose <b>Load Temporary Add-on</b> and select the Firefox folder's <code>manifest.json</code>.</span></div></li>
+        <li><div><strong>Use it while browsing</strong><span>Visit a website or open Gmail or Outlook. Click Alerter to scan page links, visible Gmail previews, or the open message. Choose <b>Scan visible screen</b> to capture the current tab once and read its visible text locally.</span></div></li>
+      </ol>
+
+      <h2 class="section-title">2. Choose the matching extension folder</h2>
+      <div class="paths">
+        <div class="path"><b>Chrome · Edge · Brave · Opera</b><code id="chromium-path"></code></div>
+        <div class="path"><b>Firefox desktop</b><code id="firefox-path"></code></div>
+      </div>
+
+      <div class="privacy"><b>Permission note:</b> Background link and email checks require permission to read pages you visit, including visible webmail content. A screen image is captured only after you click its scan button; the image is read by local OCR, used for the check, and discarded. Alerter does not upload scan content to a cloud service or delete email.</div>
+      <p class="bottom">The extension package targets desktop Chrome, Edge, Brave, Opera, and Firefox. Browser extensions are not supported in the same way on every mobile browser; Safari requires a separate signed package. Link and email checks are indicators, not a guarantee that a low-risk result is safe.</p>
+    </main>
+    <script>
+      let path=decodeURIComponent(location.pathname).replace(/^\/(\w:)/,'$1').replace(/\//g,'\\').replace(/\\setup\.html$/i,'');
+      path=path.replace(/\\build\\(?:chromium|firefox)$/i,'');
+      document.getElementById('chromium-path').textContent=path+'\\build\\chromium';
+      document.getElementById('firefox-path').textContent=path+'\\build\\firefox';
+    </script>
+  </body>
+</html>

@@ -1,0 +1,3 @@
+phishing-detection-py==0.1.6
+networkx
+sympy

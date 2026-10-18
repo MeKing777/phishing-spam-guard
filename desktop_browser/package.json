@@ -1,0 +1,9 @@
+{
+  "name": "phishing-spam-guard-browser-launcher",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Launches a normal Chrome window with the local Phishing & Spam Guard extension.",
+  "main": "launch_guard.js",
+  "scripts": { "start": "node launch_guard.js" },
+  "dependencies": { "puppeteer-core": "25.14.0" }
+}

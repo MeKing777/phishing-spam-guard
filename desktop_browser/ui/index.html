@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:;">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phishing &amp; Spam Guard Browser</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="chrome">
+      <div class="tab-row">
+        <div class="brand"><span class="brand-icon">🛡</span><span>Guard</span></div>
+        <div id="tabs" class="tabs" role="tablist" aria-label="Browser tabs"></div>
+        <button id="new-tab" class="icon-button new-tab" aria-label="New tab" title="New tab">＋</button>
+      </div>
+      <div class="toolbar">
+        <button id="back" class="icon-button" aria-label="Back" title="Back">←</button>
+        <button id="forward" class="icon-button" aria-label="Forward" title="Forward">→</button>
+        <button id="reload" class="icon-button" aria-label="Reload" title="Reload">↻</button>
+        <form id="address-form" class="address-form">
+          <span class="address-shield" aria-hidden="true">◈</span>
+          <input id="address" type="text" autocomplete="off" spellcheck="false" placeholder="Search or enter a website address" aria-label="Search or enter a website address">
+          <button type="submit" class="go-button">Go</button>
+        </form>
+        <label class="protection-control" title="Turn local link checks on or off">
+          <input id="protection" type="checkbox" checked>
+          <span class="switch"></span><span>Protection</span>
+        </label>
+        <button id="scan-email" class="scan-button" disabled>Scan email</button>
+      </div>
+      <section id="notice" class="notice hidden" aria-live="polite">
+        <div class="notice-icon">!</div>
+        <div class="notice-copy"><strong id="notice-title"></strong><span id="notice-detail"></span></div>
+        <button id="notice-close" class="notice-close" aria-label="Dismiss message">×</button>
+      </section>
+    </header>
+    <main id="home" class="home-screen">
+      <div class="home-card">
+        <div class="home-mark">🛡️</div>
+        <p class="eyebrow">PRIVATE, LOCAL CHECKS</p>
+        <h1>Browse with a little more confidence.</h1>
+        <p class="home-copy">Enter a website above. Suspicious links can be highlighted, and high-risk destinations get a warning before opening.</p>
+        <div class="home-grid">
+          <article><span>01</span><strong>Browse normally</strong><p>Use the address bar, tabs, and back/forward controls like a regular browser.</p></article>
+          <article><span>02</span><strong>Check a message</strong><p>Open one email in Gmail or Outlook, then choose <em>Scan email</em>.</p></article>
+          <article><span>03</span><strong>Choose what happens</strong><p>Links are flagged for review. Messages are never moved or deleted automatically.</p></article>
+        </div>
+        <p class="local-note"><span class="status-dot"></span> Link and email text checks run on this computer.</p>
+      </div>
+    </main>
+    <section id="email-report" class="email-report hidden" role="dialog" aria-modal="true" aria-labelledby="report-title">
+      <div class="report-card">
+        <div class="report-heading"><div><p class="eyebrow">LOCAL MESSAGE CHECK</p><h2 id="report-title">Email scan</h2></div><button id="report-close" class="notice-close" aria-label="Close email scan report">×</button></div>
+        <div id="report-summary" class="report-summary"></div>
+        <div id="report-meta" class="report-meta"></div>
+        <h3>What we noticed</h3><ul id="report-signals" class="report-signals"></ul>
+        <div id="report-link-section" class="hidden"><h3>Links found in the message</h3><ul id="report-links" class="email-links"></ul></div>
+        <section class="ai-review">
+          <button id="ask-local-ai" class="ai-button" type="button">Ask local AI on this PC</button>
+          <p id="ai-result" class="ai-result hidden" aria-live="polite"></p>
+          <p class="ai-note">Optional second opinion. Email content is sent only to Ollama on this computer when you click the button.</p>
+        </section>
+        <p class="report-footnote">A low score is not proof that an email is safe. The local checks do not verify who sent it.</p>
+      </div>
+    </section>
+    <script src="bridge.js"></script>
+    <script src="renderer.js"></script>
+  </body>
+</html>

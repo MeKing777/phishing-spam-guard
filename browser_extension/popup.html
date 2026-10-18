@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <title>Alerter</title>
+    <style>
+      :root{font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;color:#17233b;background:#f5f8fd}
+      *{box-sizing:border-box}body{width:min(390px,100vw);min-height:330px;max-height:min(720px,92vh);overflow-y:auto;margin:0;padding:17px;background:#f5f8fd}
+      header{display:flex;align-items:center;gap:11px;margin-bottom:15px}.logo{width:42px;height:42px;border-radius:13px;background:#e9f0ff;display:grid;place-items:center}.logo img{width:30px;height:30px}
+      h1{font-size:17px;line-height:1.2;margin:0;color:#142440;letter-spacing:-.02em}.sub{font-size:11px;color:#6c7d96;margin-top:3px}
+      .service{margin-left:auto;display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid #dce6f2;border-radius:999px;background:#fff;color:#64748b;font-size:10px;font-weight:700;white-space:nowrap}.dot{width:7px;height:7px;border-radius:50%;background:#e59b28}.service.online .dot{background:#139363}
+      .page{padding:12px 13px;border:1px solid #dfe7f2;border-radius:12px;background:#fff}.eyebrow{color:#77859b;font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase}.url{margin-top:4px;color:#263c5e;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:11px}button{min-height:40px;border:0;border-radius:10px;padding:9px 10px;background:#2463e9;color:#fff;font:700 12px system-ui,sans-serif;cursor:pointer;transition:filter .15s,transform .15s}button:hover:not(:disabled){filter:brightness(.95);transform:translateY(-1px)}button:disabled{background:#dce4ef;color:#8694a8;cursor:not-allowed}.secondary{border:1px solid #d7e2ef;background:white;color:#2b4772}#scan-screen{grid-column:1/-1;background:#edf3ff;color:#244d91;border:1px solid #d5e2fa}.scan-help{grid-column:1/-1;margin:-3px 2px 0;color:#77859a;font-size:10px;line-height:1.4}
+      #result{display:grid;gap:8px;margin-top:11px;max-height:420px;overflow:auto}.empty{padding:14px;border:1px dashed #d4deeb;border-radius:11px;color:#6d7d94;background:#fff;font-size:12px;text-align:center}.empty strong{display:block;color:#3c506d;margin-bottom:3px}
+      .report{padding:13px;border:1px solid #dfe7f2;border-radius:12px;background:#fff}.report.high{border-color:#f0c5c5;background:#fff8f8}.report.review{border-color:#f2ddb1;background:#fffcf4}.report.low{border-color:#cde7d8;background:#f7fcf8}
+      .result-head{display:flex;align-items:center;gap:8px}.pill{padding:4px 7px;border-radius:999px;background:#edf1f7;color:#52627a;font-size:10px;font-weight:800;text-transform:uppercase}.high .pill{background:#ffe4e4;color:#9f2830}.review .pill{background:#fff0c8;color:#83580b}.low .pill{background:#ddf4e6;color:#176c42}.score{margin-left:auto;color:#50617a;font-size:11px;font-weight:750}.category{margin-top:8px;font-size:15px;font-weight:800;color:#203654}.subject,.sender{margin-top:4px;color:#52627a;font-size:11px;overflow-wrap:anywhere}.signals{margin:10px 0 0;padding-left:17px;color:#42536d;font-size:11px}.signals li+li{margin-top:4px}.links-title{margin:12px 0 5px;color:#556780;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.06em}.links{display:grid;gap:5px}.link{padding:7px 8px;border-radius:8px;background:#f6f8fb;font-size:10px;color:#374b68;overflow-wrap:anywhere}.link strong{color:#233b60}
+      .notice{margin:10px 2px 0;color:#77859a;font-size:10px;line-height:1.45}.notice.error{color:#a43d3d}.footer{margin-top:13px;padding-top:10px;border-top:1px solid #e4eaf2;color:#7a879b;font-size:10px;line-height:1.5}
+      @media(max-width:350px){body{padding:13px}.actions{grid-template-columns:1fr}.service{font-size:9px}.url{font-size:11px}}
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="logo"><img src="icons/alerter-48.png" alt=""></div>
+      <div><h1>Alerter</h1><div class="sub">Phishing &amp; spam protection</div></div>
+      <div id="service" class="service" title="Local Python checker status"><span class="dot"></span><span id="service-label">Checking…</span></div>
+    </header>
+    <section class="page" aria-label="Current page">
+      <div class="eyebrow">Current page</div>
+      <div id="page-url" class="url">Reading active tab…</div>
+    </section>
+    <div class="actions">
+      <button id="check">Scan this page</button>
+      <button id="scan-email" class="secondary" disabled>Scan open email</button>
+      <button id="scan-screen" class="secondary" disabled>Scan visible screen</button>
+      <div id="scan-help" class="scan-help">Captures only the visible tab after you click. Text is read and checked on this computer.</div>
+    </div>
+    <div id="result" aria-live="polite"><div class="empty"><strong>Protection is ready</strong>Scan a page or open a message in Gmail or Outlook.</div></div>
+    <div id="notice" class="notice">Checks run on this computer. A low-risk result does not prove a page or message is safe.</div>
+    <div class="footer">Alerter checks page addresses, visible email text, and screen text when you request a scan. Screen images and scan results stay on this computer.</div>
+    <script src="popup.js"></script>
+  </body>
+</html>
