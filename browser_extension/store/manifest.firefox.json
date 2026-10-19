@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Alerter — Phishing & Spam Protection",
+  "version": "2.0.0",
+  "description": "Checks web links and visible email messages for phishing and spam warning signs on your device.",
+  "permissions": ["activeTab", "notifications"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": {
+    "scripts": ["analyzer.js", "background.js"]
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "alerter-security@example.org",
+      "data_collection_permissions": { "required": ["none"] }
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Alerter — scan this page",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/alerter-16.png",
+      "48": "icons/alerter-48.png",
+      "128": "icons/alerter-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/alerter-16.png",
+    "48": "icons/alerter-48.png",
+    "128": "icons/alerter-128.png"
+  }
+}

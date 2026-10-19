@@ -136,7 +136,7 @@
     try {
       for (let start = 0; start < unique.length; start += 80) {
         const response = await chrome.runtime.sendMessage({ type: "analyze-links", urls: unique.slice(start, start + 80) });
-        if (!response?.ok) throw new Error(response?.error || "The local checker is unavailable");
+        if (!response?.ok) throw new Error(response?.error || "Alerter could not check these links.");
         for (const result of response.result || []) ratings.set(result.url, result);
       }
       for (const anchor of document.querySelectorAll("a[href]")) {
@@ -167,7 +167,7 @@
     } catch (error) {
       if (!window.__guardServiceNoticeShown) {
         window.__guardServiceNoticeShown = true;
-        showNotice("link", "Alerter checker is offline", "Start start_alerter_checker.bat from the project folder to restore local checks.");
+        showNotice("link", "Alerter could not check this page", "Open the extension and try the scan again.");
       }
       console.warn("Alerter:", error.message);
     } finally { checking = false; }
@@ -286,7 +286,7 @@
     try {
       const checked = await Promise.all(pending.map(async (email) => {
         const response = await chrome.runtime.sendMessage({ type: "analyze-email", email });
-        if (!response?.ok) throw new Error(response?.error || "The local checker is unavailable");
+        if (!response?.ok) throw new Error(response?.error || "Alerter could not check this message.");
         const fingerprint = `${email.subject}|${email.sender}|${email.body}`;
         inboxFingerprints.set(email.preview_id, fingerprint);
         highlightInboxPreview(email, response.result);
@@ -317,8 +317,8 @@
     lastEmailFingerprint = fingerprint;
     const response = await chrome.runtime.sendMessage({ type: "analyze-email", email });
     if (!response?.ok) {
-      if (showFailure) showNotice("email", "Email check is offline", response?.error || "Start Alerter's local checker and try again.");
-      return { ok: false, error: response?.error || "Local email check failed" };
+      if (showFailure) showNotice("email", "Alerter could not check this message", response?.error || "Try the scan again.");
+      return { ok: false, error: response?.error || "Email check failed" };
     }
     const result = response.result;
     const summary = `${result.risk_level} risk · ${result.risk_score}/100 · ${result.category}`;

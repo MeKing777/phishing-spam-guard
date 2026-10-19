@@ -19,6 +19,7 @@ token-*.json
 *.crx
 .streamlit/secrets.toml
 browser_extension/build/
+browser_extension/store/build/
 *.zip
 *.csproj.user
 desktop_browser/node_modules/

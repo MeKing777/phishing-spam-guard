@@ -38,7 +38,7 @@ function clearResult() {
 function showError(error) {
   resultBox.innerHTML = '<div class="empty"><strong>Scan could not finish</strong></div>';
   notice.classList.add("error");
-  notice.textContent = error || "Start Alerter's local checker and try again.";
+  notice.textContent = error || "Alerter could not finish this check. Try again.";
 }
 
 function showResult(result) {
@@ -167,7 +167,7 @@ function showInboxPreviews(items) {
 
 async function runLocalCheck(type, payload = {}) {
   const response = await chrome.runtime.sendMessage({ type, ...payload });
-  if (!response?.ok) throw new Error(response?.error || "The local Alerter checker is not running.");
+  if (!response?.ok) throw new Error(response?.error || "Alerter could not finish this check.");
   return response.result;
 }
 
@@ -186,6 +186,14 @@ async function updateServiceStatus() {
   try {
     const status = await runLocalCheck("checker-status");
     service.classList.add("online");
+    if (status?.mode === "on-device") {
+      serviceLabel.textContent = "On-device checks ready";
+      screenButton.hidden = true;
+      screenHelp.hidden = true;
+      const footer = document.getElementById("footer");
+      if (footer) footer.textContent = "Alerter checks page addresses and visible email text on this device. Scan content is not sent to an Alerter server.";
+      return;
+    }
     serviceLabel.textContent = "Local checker on";
     if (status?.screen_ocr_available) {
       screenHelp.textContent = "Captures only the visible tab after you click. Text is read and checked on this computer.";
@@ -195,7 +203,7 @@ async function updateServiceStatus() {
   } catch {
     service.classList.remove("online");
     serviceLabel.textContent = "Checker offline";
-    notice.textContent = "Start Alerter's local checker to enable scans. Use start_alerter_checker.bat in the project folder.";
+    notice.textContent = "Alerter checks are unavailable. Reload the extension and try again.";
   }
 }
 
@@ -204,7 +212,7 @@ checkButton.addEventListener("click", async () => {
   checkButton.disabled = true;
   checkButton.textContent = "Scanning…";
   clearResult();
-  resultBox.innerHTML = '<div class="empty"><strong>Checking this address</strong>Running the local phishing checks…</div>';
+  resultBox.innerHTML = '<div class="empty"><strong>Checking this address</strong>Running phishing checks on this device…</div>';
   try { showResult(await runLocalCheck("analyze-url", { url: activeTab.url })); }
   catch (error) { showError(error.message); }
   finally { checkButton.disabled = false; checkButton.textContent = "Scan this page"; }
@@ -219,7 +227,7 @@ screenButton.addEventListener("click", async () => {
   try {
     const imageDataUrl = await captureVisibleTab(activeTab.windowId);
     showResult(await runLocalCheck("analyze-screen", { image_data_url: imageDataUrl }));
-  } catch (error) { showError(error.message || "Screen scan could not finish. Start the local checker and try again."); }
+  } catch (error) { showError(error.message || "Screen scan could not finish. Try again."); }
   finally {
     screenButton.disabled = false;
     screenButton.textContent = "Scan visible screen";
@@ -231,7 +239,7 @@ emailButton.addEventListener("click", async () => {
   emailButton.disabled = true;
   emailButton.textContent = "Scanning…";
   clearResult();
-  resultBox.innerHTML = '<div class="empty"><strong>Scanning email</strong>Checking the open message or visible Gmail previews locally…</div>';
+  resultBox.innerHTML = '<div class="empty"><strong>Scanning email</strong>Checking the open message or visible Gmail previews on this device…</div>';
   try {
     const scanData = await chrome.tabs.sendMessage(activeTab.id, { type: "scan-email-now" });
     if (scanData?.found) {
