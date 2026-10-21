@@ -9,6 +9,7 @@ from src.analyzer import analyze_email, analyze_url
 from src.gmail_client import connect_gmail, disconnect_gmail, fetch_inbox, move_to_spam, move_to_trash
 from src.ml_detector import assess_phishing, phishing_package_installed
 from src.ollama_client import explain_with_ollama
+from src.trained_detector import models_available
 
 
 st.set_page_config(
@@ -488,6 +489,18 @@ elif current_page == "Settings":
             st.markdown("Enable the Gmail API in Google Cloud, create a **Desktop app** OAuth client, and save its JSON file here as `credentials.json`. Then select Connect Gmail.")
 
     with right:
+        trained_models = models_available()
+        with st.container(border=True):
+            st.markdown("### Local trained classifiers")
+            ready_models = [name for name, available in trained_models.items() if available]
+            if ready_models:
+                st.success(f"Active locally: {', '.join(ready_models)}")
+            else:
+                st.info("Not trained on this computer yet. Run `python -m tools.train_local_models`.")
+            st.caption(
+                "Email and URL predictions run locally and can add a Review warning "
+                "when the validation-tuned threshold is met. Heuristic checks still run."
+            )
         with st.container(border=True):
             st.markdown("### Pretrained phishing model")
             st.checkbox(

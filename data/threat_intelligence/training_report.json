@@ -1,0 +1,250 @@
+{
+  "seed": 47,
+  "method": "HashingVectorizer + SGD logistic-loss classifier; exact duplicate email groups and normalized URL host groups are held wholly within one train/validation/test partition. Risk-class warning thresholds are selected on validation for at least 98% precision, when feasible.",
+  "sources": {
+    "email_spam_ham": {
+      "url": "https://huggingface.co/datasets/haoxianc/haldonmez_spam-or-ham-a-dataset-for-email-classification/resolve/ff760d3eb375d52912ff7639521177f780922598/dataset/combined_enron.csv",
+      "license": "CC0-1.0",
+      "citation": "Halil Donmez, Spam Email Classification Dataset; mirror and source details: https://huggingface.co/datasets/haoxianc/haldonmez_spam-or-ham-a-dataset-for-email-classification"
+    },
+    "email_phishing": {
+      "url": "https://huggingface.co/datasets/zefang-liu/phishing-email-dataset/resolve/34085a032c123ca237f314a01a67909cdea35e34/Phishing_Email.csv",
+      "license": "LGPL-3.0",
+      "citation": "Cyber Cop, Phishing Email Detection; source and license details: https://huggingface.co/datasets/zefang-liu/phishing-email-dataset"
+    },
+    "url_train": {
+      "url": "https://huggingface.co/datasets/pirocheto/phishing-url/resolve/1375d450d4540205ac11781b807249c9509739cd/data/train.parquet",
+      "license": "CC-BY-4.0",
+      "citation": "Hannousse & Yahiouche (2021), Towards benchmark datasets for machine learning based website phishing detection: an experimental study, https://doi.org/10.1016/j.engappai.2021.104347"
+    },
+    "url_test": {
+      "url": "https://huggingface.co/datasets/pirocheto/phishing-url/resolve/1375d450d4540205ac11781b807249c9509739cd/data/test.parquet",
+      "license": "CC-BY-4.0",
+      "citation": "Hannousse & Yahiouche (2021), Towards benchmark datasets for machine learning based website phishing detection: an experimental study, https://doi.org/10.1016/j.engappai.2021.104347"
+    }
+  },
+  "models": {
+    "email": {
+      "data": {
+        "raw_rows": 51711,
+        "unique_after_exact_deduplication": 47573,
+        "conflicting_duplicate_groups_removed": 0,
+        "source_label_counts_before_deduplication": {
+          "email_spam_ham": {
+            "benign": 16542,
+            "spam": 17084
+          },
+          "email_phishing": {
+            "benign": 11120,
+            "phishing": 6965
+          }
+        },
+        "unique_label_counts": {
+          "benign": 26531,
+          "phishing": 6527,
+          "spam": 14515
+        },
+        "split_rows": {
+          "train": 30448,
+          "validation": 7611,
+          "test": 9514
+        },
+        "split_group_counts": {
+          "train": 30448,
+          "validation": 7611,
+          "test": 9514
+        }
+      },
+      "metrics": {
+        "accuracy": 0.986335926003784,
+        "macro_f1": 0.9834275088262183,
+        "classification_report": {
+          "benign": {
+            "precision": 0.9941019786910198,
+            "recall": 0.9847342630983792,
+            "f1-score": 0.989395947737171,
+            "support": 5306.0
+          },
+          "phishing": {
+            "precision": 0.9769230769230769,
+            "recall": 0.9731800766283525,
+            "f1-score": 0.9750479846449136,
+            "support": 1305.0
+          },
+          "spam": {
+            "precision": 0.9766734279918864,
+            "recall": 0.9951774026868756,
+            "f1-score": 0.9858385940965706,
+            "support": 2903.0
+          },
+          "accuracy": 0.986335926003784,
+          "macro avg": {
+            "precision": 0.9825661612019944,
+            "recall": 0.9843639141378692,
+            "f1-score": 0.9834275088262183,
+            "support": 9514.0
+          },
+          "weighted avg": {
+            "precision": 0.9864276514378403,
+            "recall": 0.986335926003784,
+            "f1-score": 0.9863424382297021,
+            "support": 9514.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            5225,
+            28,
+            53
+          ],
+          [
+            19,
+            1270,
+            16
+          ],
+          [
+            12,
+            2,
+            2889
+          ]
+        ],
+        "classes": [
+          "benign",
+          "phishing",
+          "spam"
+        ],
+        "threshold_metrics_on_test": {
+          "benign": {
+            "threshold": 0.5,
+            "precision": 0.9944782939832445,
+            "recall": 0.9843573313230305,
+            "f1": 0.9893919302898276,
+            "actual_positive": 5306,
+            "flagged_count": 5252
+          },
+          "phishing": {
+            "threshold": 0.54,
+            "precision": 0.9859375,
+            "recall": 0.9670498084291188,
+            "f1": 0.9764023210831722,
+            "actual_positive": 1305,
+            "flagged_count": 1280
+          },
+          "spam": {
+            "threshold": 0.53,
+            "precision": 0.9786223277909739,
+            "recall": 0.9934550465036169,
+            "f1": 0.9859829059829059,
+            "actual_positive": 2903,
+            "flagged_count": 2947
+          }
+        }
+      },
+      "model_file": "models/alerter_email_v1.joblib"
+    },
+    "url": {
+      "data": {
+        "raw_rows": 11430,
+        "unique_after_exact_deduplication": 11427,
+        "conflicting_duplicate_groups_removed": 0,
+        "source_label_counts_before_deduplication": {
+          "url_train": {
+            "legitimate": 3829,
+            "phishing": 3829
+          },
+          "url_test": {
+            "phishing": 1886,
+            "legitimate": 1886
+          }
+        },
+        "unique_label_counts": {
+          "legitimate": 5715,
+          "phishing": 5712
+        },
+        "distinct_host_groups": 8113,
+        "split_rows": {
+          "train": 7313,
+          "validation": 1829,
+          "test": 2285
+        },
+        "split_group_counts": {
+          "train": 5216,
+          "validation": 1277,
+          "test": 1620
+        }
+      },
+      "metrics": {
+        "accuracy": 0.9181619256017506,
+        "macro_f1": 0.9181342671206855,
+        "classification_report": {
+          "legitimate": {
+            "precision": 0.9037162162162162,
+            "recall": 0.9361329833770778,
+            "f1-score": 0.9196390201976794,
+            "support": 1143.0
+          },
+          "phishing": {
+            "precision": 0.9336966394187103,
+            "recall": 0.9001751313485113,
+            "f1-score": 0.9166295140436915,
+            "support": 1142.0
+          },
+          "accuracy": 0.9181619256017506,
+          "macro avg": {
+            "precision": 0.9187064278174633,
+            "recall": 0.9181540573627947,
+            "f1-score": 0.9181342671206855,
+            "support": 2285.0
+          },
+          "weighted avg": {
+            "precision": 0.9186998675498042,
+            "recall": 0.9181619256017506,
+            "f1-score": 0.9181349256559489,
+            "support": 2285.0
+          }
+        },
+        "confusion_matrix": [
+          [
+            1070,
+            73
+          ],
+          [
+            114,
+            1028
+          ]
+        ],
+        "classes": [
+          "legitimate",
+          "phishing"
+        ],
+        "threshold_metrics_on_test": {
+          "legitimate": {
+            "threshold": 0.9299999999999999,
+            "precision": 0.9782903663500678,
+            "recall": 0.6307961504811899,
+            "f1": 0.7670212765957447,
+            "actual_positive": 1143,
+            "flagged_count": 737
+          },
+          "phishing": {
+            "threshold": 0.75,
+            "precision": 0.9725448785638859,
+            "recall": 0.8064798598949212,
+            "f1": 0.8817616084250838,
+            "actual_positive": 1142,
+            "flagged_count": 947
+          }
+        }
+      },
+      "model_file": "models/alerter_url_v1.joblib"
+    }
+  },
+  "limitations": [
+    "These public corpora are historical and source-biased; performance is not a guarantee on current threats.",
+    "Email duplicate control is exact after whitespace and case normalization, not semantic near-duplicate detection.",
+    "Email test data is a grouped holdout from the same source corpora, not a source-held-out evaluation; source-specific patterns can inflate results.",
+    "URL grouping is by hostname, not a full public-suffix registrable-domain calculation.",
+    "The phishing email corpus is LGPL-3.0 and its labels/provenance inherit the source dataset's limitations.",
+    "Model scores are not probabilities calibrated for real-world prevalence; low risk is not proof of safety."
+  ]
+}

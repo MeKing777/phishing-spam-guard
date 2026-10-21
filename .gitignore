@@ -21,6 +21,8 @@ token-*.json
 browser_extension/build/
 browser_extension/store/build/
 *.zip
+data/training_sources/
+models/
 *.csproj.user
 desktop_browser/node_modules/
 desktop_browser/dist/
@@ -30,4 +32,3 @@ desktop_browser/windows/bin/
 desktop_browser/windows/obj/
 desktop_browser/windows/.dotnet/
 desktop_browser/windows/.nuget/
-

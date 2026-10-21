@@ -30,3 +30,21 @@ default. Set `ALERTER_MONGODB_DATABASE` to use another database name. It
 does not read or upload inbox contents, messages, or browsing history. Atlas
 is a data store; loading examples alone does not train the current Alerter
 heuristics or add a threat feed to live scans.
+
+## Local supervised models
+
+`python -m tools.train_local_models` downloads fixed revisions of public corpora
+to the ignored `data/training_sources/` directory and writes local model files
+to the ignored `models/` directory. It does not use Atlas or read mailbox data.
+The email trainer combines the CC0 spam/ham mirror and the LGPL-3.0 phishing
+email dataset. The URL trainer uses the CC BY 4.0 Hannousse–Yahiouche phishing
+URL benchmark. Attribution, revision-pinned source links, class counts, split
+method, conservative warning thresholds, and held-out metrics are recorded in
+`training_report.json`. Warnings target at least 98% validation precision when
+that threshold can be achieved.
+
+The datasets are historical and may have source overlap or labeling bias.
+Exact normalized email duplicates and URL hostnames are group-separated across
+train, validation, and test partitions, but semantic near-duplicates and
+registrable-domain variants may remain. Do not interpret the resulting metrics
+as proof of protection against current threats.

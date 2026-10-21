@@ -8,6 +8,8 @@ from email.utils import parseaddr
 from html import unescape
 from urllib.parse import parse_qsl, urlsplit
 
+from src.trained_detector import assess as assess_trained_model
+
 
 URL_PATTERN = re.compile(r"(?i)\b(?:https?://|www\.)[^\s<>\"']+")
 TRAILING_URL_PUNCTUATION = ").,!?;:]}'\""
@@ -217,6 +219,13 @@ def analyze_url(url: str, _depth: int = 0) -> dict:
                 )
                 break
 
+    trained_model = assess_trained_model(url, "url")
+    if trained_model and trained_model["flagged"] and trained_model["label"] == "phishing":
+        score = max(score, 30)
+        signals.append(
+            "The locally trained URL model flags this address as phishing "
+            f"({trained_model['confidence']:.0%} model score)"
+        )
     score = min(score, 100)
     level = "High" if score >= 55 else "Review" if score >= 25 else "Low"
     if not signals:
@@ -334,6 +343,14 @@ def analyze_email(
             signals.append(f"Contains a link with URL warning signs (highest URL score: {highest_url_risk}/100)")
             kinds.add("Phishing")
 
+    trained_model = assess_trained_model(content, "email")
+    if trained_model and trained_model["flagged"] and trained_model["label"] in {"phishing", "spam"}:
+        score = max(score, 30)
+        signals.append(
+            f"The locally trained email model flags this as {trained_model['label']} "
+            f"({trained_model['confidence']:.0%} model score)"
+        )
+        kinds.add(trained_model["label"].title())
     score = min(score, 100)
     if not signals:
         signals.append("No obvious spam or phishing indicators found by the local checks")
@@ -348,4 +365,5 @@ def analyze_email(
         "subject": subject,
         "attachment_names": list(attachment_names),
         "notice": "A Low score is not proof that a message is safe. These checks do not verify sender identity or visit links.",
+        "trained_model": trained_model,
     }

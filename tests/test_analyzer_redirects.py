@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 
 from src.analyzer import analyze_url
 
@@ -21,10 +22,11 @@ class AnalyzeRedirectUrlTests(unittest.TestCase):
         self.assertEqual(result["risk_level"], "Review")
 
     def test_does_not_raise_risk_for_unflagged_redirect_destination(self):
-        result = analyze_url(
-            "https://safe.example/redirect?next="
-            "https%3A%2F%2Fexample.org%2Farticle"
-        )
+        with patch("src.analyzer.assess_trained_model", return_value=None):
+            result = analyze_url(
+                "https://safe.example/redirect?next="
+                "https%3A%2F%2Fexample.org%2Farticle"
+            )
 
         self.assertEqual(result["risk_level"], "Low")
 

@@ -89,6 +89,41 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 
 Then restart the dashboard and enable **Use the optional ML phishing classifier** in Settings. The first email or URL analysis downloads pretrained Hugging Face model files; later inference runs locally. The model returns a phishing/legitimate label and confidence. Its confidence is not a calibrated probability, it does not detect general spam, and it does not change the explainable local risk score. The package documents email and URL classification in its [official usage guide](https://cmacha2.github.io/phishing-detection-docs/docs/usage/).
 
+## Locally trained email and URL models
+
+The local Python scanner can use two compact, on-device classifiers trained from
+pinned public datasets. Email training combines a CC0 spam/ham corpus with a
+phishing-email corpus declared LGPL-3.0. URL training uses the CC BY 4.0
+Hannousse–Yahiouche academic phishing-URL benchmark. Dataset citations,
+revision-pinned download URLs, class counts, grouped holdout metrics, and
+limitations are written to `data/threat_intelligence/training_report.json`.
+The raw downloads are kept in the ignored `data/training_sources/` directory;
+they are not uploaded, committed, or sent to MongoDB.
+
+To train or reproduce the models locally:
+
+```powershell
+python -m pip install -r requirements-training.txt
+python -m tools.train_local_models
+```
+
+The trainer removes exact normalized duplicate emails and conflicting labels,
+keeps duplicate-email groups and URL hostnames within one train/validation/test
+split, tunes per-class warning thresholds on validation data, and reports final
+metrics on the held-out test split. It writes the local model artifacts under
+`models/`. Only model predictions over the validation-set precision threshold
+can add a Review warning; the trainer targets at least 98% validation precision
+when achievable. The model alone never upgrades a message or URL to High.
+Heuristic checks still run, and the browser-store edition remains its own
+JavaScript-only detector.
+
+These corpora are historical and source-biased, not a live threat feed. Email
+near-duplicates, source overlap, current campaign drift, and real-world class
+prevalence limit the metrics. Email test data is held out by exact normalized
+content groups, not by source corpus, so source-specific patterns can inflate
+results. Model scores are not calibrated real-world probabilities. The model
+is a second signal, not proof that any message or website is safe.
+
 ## Detection limits
 
 The local checks use visible message wording, available mail headers, HTML link text and destinations, attachment filenames, and lexical URL traits. Gmail attachments are not downloaded or opened. Authentication results are treated as reported signals; pasted headers may be forged. The app does not cryptographically verify signatures, visit links, query threat-intelligence feeds, or prove that a low-risk message is safe. The optional model is a second opinion, not a validated replacement for local indicators; evaluate it on representative labeled data before relying on it. Keep Spam and Trash actions under the user's control.
