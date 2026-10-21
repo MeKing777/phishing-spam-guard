@@ -10,7 +10,7 @@
   let lastEmailFingerprint = "";
   let notifiedHigh = false;
   let scanningInbox = false;
-  let lastInboxScanAttempt = 0;
+  let inboxRescanPending = false;
   let linkBadge;
   let emailBadge;
   const inboxFingerprints = new Map();
@@ -226,8 +226,11 @@
       return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
     };
     return [...document.querySelectorAll("tr.zA")]
-      .filter(isVisible)
-      .slice(0, 12)
+      .filter((row) => {
+        if (!isVisible(row)) return false;
+        const rect = row.getBoundingClientRect();
+        return rect.bottom > 0 && rect.top < window.innerHeight;
+      })
       .map((row, index) => {
         const senderNode = row.querySelector("[email]");
         const subjectNode = row.querySelector(".bog") || row.querySelector(".y6 span");
@@ -273,10 +276,12 @@
   }
 
   async function scanVisibleGmailInbox() {
-    if (scanningInbox) return;
+    if (scanningInbox) {
+      inboxRescanPending = true;
+      return;
+    }
     const previews = extractVisibleGmailPreviews();
-    if (!previews.length || Date.now() - lastInboxScanAttempt < 4500) return;
-    lastInboxScanAttempt = Date.now();
+    if (!previews.length) return;
     const pending = previews.filter((email) => {
       const fingerprint = `${email.subject}|${email.sender}|${email.body}`;
       return inboxFingerprints.get(email.preview_id) !== fingerprint;
@@ -284,16 +289,19 @@
     if (!pending.length) return;
     scanningInbox = true;
     try {
-      const checked = await Promise.all(pending.map(async (email) => {
-        const response = await chrome.runtime.sendMessage({ type: "analyze-email", email });
-        if (!response?.ok) throw new Error(response?.error || "Alerter could not check this message.");
-        const fingerprint = `${email.subject}|${email.sender}|${email.body}`;
-        inboxFingerprints.set(email.preview_id, fingerprint);
-        highlightInboxPreview(email, response.result);
-        return { email, result: response.result };
-      }));
-      const newHighRisk = checked.filter(({ email, result }) =>
-        result.risk_level === "High" && !notifiedInboxEmails.has(email.preview_id));
+      const newHighRisk = [];
+      for (let start = 0; start < pending.length; start += 8) {
+        const checked = await Promise.all(pending.slice(start, start + 8).map(async (email) => {
+          const response = await chrome.runtime.sendMessage({ type: "analyze-email", email });
+          if (!response?.ok) throw new Error(response?.error || "Alerter could not check this message.");
+          const fingerprint = `${email.subject}|${email.sender}|${email.body}`;
+          inboxFingerprints.set(email.preview_id, fingerprint);
+          highlightInboxPreview(email, response.result);
+          return { email, result: response.result };
+        }));
+        newHighRisk.push(...checked.filter(({ email, result }) =>
+          result.risk_level === "High" && !notifiedInboxEmails.has(email.preview_id)));
+      }
       for (const { email } of newHighRisk) notifiedInboxEmails.add(email.preview_id);
       if (newHighRisk.length) {
         showNotice("email", "Alerter found a risky email preview", `${newHighRisk.length} visible Gmail preview${newHighRisk.length === 1 ? " has" : "s have"} high-risk warning signs. Open a message for the full scan.`, newHighRisk.slice(0, 3).map(({ email, result }) => `${email.sender_name || email.sender || "Sender"} · ${result.risk_score}/100`), [], "high");
@@ -303,6 +311,10 @@
       console.warn("Alerter Gmail preview scan skipped:", error.message);
     } finally {
       scanningInbox = false;
+      if (inboxRescanPending) {
+        inboxRescanPending = false;
+        setTimeout(() => void scanVisibleGmailInbox(), 250);
+      }
     }
   }
 
@@ -312,7 +324,7 @@
       if (showFailure) showNotice("email", "Open a message first", "Open one email in Gmail or Outlook, then scan it again.");
       return { ok: false, error: "Open a message in Gmail or Outlook first." };
     }
-    const fingerprint = `${location.pathname}|${email.subject}|${email.sender}|${email.body.slice(0, 700)}`;
+    const fingerprint = `${location.pathname}|${email.subject}|${email.sender}|${email.body}`;
     if (!showFailure && fingerprint === lastEmailFingerprint) return { ok: true, skipped: true };
     lastEmailFingerprint = fingerprint;
     const response = await chrome.runtime.sendMessage({ type: "analyze-email", email });
@@ -330,7 +342,7 @@
     return { ok: true, result };
   }
 
-  function scheduleEmailScan() {
+  function scheduleEmailScan(delay = 1300) {
     const host = location.hostname.toLowerCase();
     if (!["mail.google.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com"].includes(host)) return;
     clearTimeout(emailTimer);
@@ -340,7 +352,7 @@
       } else {
         void scanOpenEmail(false).catch((error) => console.warn("Email scan skipped:", error.message));
       }
-    }, 1300);
+    }, delay);
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -355,6 +367,7 @@
   });
 
   document.addEventListener("click", highRiskClick, true);
+  window.addEventListener("scroll", () => scheduleEmailScan(350), { capture: true, passive: true });
   queuePageLinks();
   scheduleEmailScan();
   const observer = new MutationObserver((records) => {

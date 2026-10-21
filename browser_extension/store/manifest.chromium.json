@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Alerter — Phishing & Spam Protection",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Checks web links and visible email messages for phishing and spam warning signs on your device.",
   "permissions": ["activeTab", "notifications"],
   "host_permissions": ["http://*/*", "https://*/*"],
