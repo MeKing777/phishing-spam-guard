@@ -6,7 +6,7 @@ import ipaddress
 import re
 from email.utils import parseaddr
 from html import unescape
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, urlsplit
 
 
 URL_PATTERN = re.compile(r"(?i)\b(?:https?://|www\.)[^\s<>\"']+")
@@ -28,6 +28,11 @@ SPAM_PATTERNS = (
 
 SHORTENER_HOSTS = {
     "bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "rb.gy", "rebrand.ly", "shorturl.at"
+}
+REDIRECT_PARAMS = {
+    "url", "u", "target", "destination", "redirect", "redirecturl", "redirecturi",
+    "redir", "next", "continue", "continueurl", "continueuri", "return", "returnto",
+    "returnurl", "returnuri", "out", "to", "link", "goto", "forward", "forwardurl",
 }
 
 BRAND_DOMAINS = {
@@ -134,7 +139,7 @@ def _parse_url(url: str):
     return urlsplit(candidate)
 
 
-def analyze_url(url: str) -> dict:
+def analyze_url(url: str, _depth: int = 0) -> dict:
     """Score visible URL traits. This does not visit the URL or verify its reputation."""
     signals: list[str] = []
     score = 0
@@ -182,7 +187,7 @@ def analyze_url(url: str) -> dict:
         signals.append(f"{message} the {brand.title()} name on a domain outside its known domains")
 
     if host in SHORTENER_HOSTS:
-        score += 15
+        score = max(score + 15, 25)
         signals.append("Uses a link-shortening service that hides the destination")
 
     labels = host.split(".")
@@ -198,6 +203,19 @@ def analyze_url(url: str) -> dict:
     if suspicious_terms:
         score += 7
         signals.append("Contains account or payment wording in the domain or path")
+
+    if parsed and _depth < 2:
+        for key, target in parse_qsl(parsed.query, keep_blank_values=False):
+            normalized_key = key.lower().replace("_", "").replace("-", "")
+            if normalized_key not in REDIRECT_PARAMS or not re.match(r"^https?://", target, re.I):
+                continue
+            nested = analyze_url(target, _depth + 1)
+            if nested["risk_score"] >= 25:
+                score = max(score, nested["risk_score"])
+                signals.append(
+                    f"Redirect parameter points to {nested['host']} ({nested['risk_level']} risk)"
+                )
+                break
 
     score = min(score, 100)
     level = "High" if score >= 55 else "Review" if score >= 25 else "Low"
@@ -331,4 +349,3 @@ def analyze_email(
         "attachment_names": list(attachment_names),
         "notice": "A Low score is not proof that a message is safe. These checks do not verify sender identity or visit links.",
     }
-

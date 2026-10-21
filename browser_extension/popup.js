@@ -25,7 +25,7 @@ chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
   try {
     const host = new URL(activeUrl).hostname.toLowerCase();
     emailButton.disabled = !mailHosts.has(host);
-    emailButton.textContent = host === "mail.google.com" ? "Scan visible emails" : "Scan open email";
+    emailButton.textContent = host === "mail.google.com" ? "Rescan visible emails" : "Rescan open email";
   }
   catch { emailButton.disabled = true; }
 });
@@ -118,7 +118,7 @@ function showInboxPreviews(items) {
   summary.className = `report ${riskyCount ? "high" : "review"}`;
   const heading = document.createElement("div");
   heading.className = "category";
-  heading.textContent = `${items.length} visible Gmail preview${items.length === 1 ? "" : "s"} scanned`;
+  heading.textContent = `${items.length} visible message preview${items.length === 1 ? "" : "s"} scanned`;
   const detail = document.createElement("div");
   detail.className = "subject";
   detail.textContent = riskyCount
@@ -163,7 +163,7 @@ function showInboxPreviews(items) {
     }
     resultBox.append(report);
   }
-  notice.textContent = "Only the messages currently visible in Gmail were checked. Low risk does not guarantee that a message is safe.";
+  notice.textContent = "Only previews currently visible in your mail app were checked. Low risk does not guarantee that a message is safe.";
 }
 
 async function runLocalCheck(type, payload = {}) {
@@ -289,8 +289,8 @@ emailButton.addEventListener("click", async () => {
   } catch (error) { showError(error.message || "Refresh the email page and try again."); }
   finally {
     emailButton.disabled = false;
-    try { emailButton.textContent = new URL(activeTab?.url || "").hostname === "mail.google.com" ? "Scan visible emails" : "Scan open email"; }
-    catch { emailButton.textContent = "Scan open email"; }
+    try { emailButton.textContent = new URL(activeTab?.url || "").hostname === "mail.google.com" ? "Rescan visible emails" : "Rescan open email"; }
+    catch { emailButton.textContent = "Rescan open email"; }
   }
 });
 

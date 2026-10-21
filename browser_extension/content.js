@@ -16,6 +16,8 @@
   let linkBadge;
   let emailBadge;
   const inboxFingerprints = new Map();
+  const inboxResults = new Map();
+  const inboxPreviewRows = new Map();
   const notifiedInboxEmails = new Set();
 
   function makeBadge(kind) {
@@ -27,12 +29,12 @@
     const style = document.createElement("style");
     style.textContent = `
       *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
-      .card{width:min(360px,calc(100vw - 24px));padding:13px 14px;border:1px solid #ead2a0;border-radius:13px;background:#fff9ec;color:#563d11;box-shadow:0 10px 38px #15223830}
-      .card.high{border-color:#f0bec2;background:#fff1f1;color:#772c32}
-      .card.review{border-color:#f2ddb1;background:#fffcf4;color:#73520f}
-      .card.safe{border-color:#c9e5d5;background:#eff9f3;color:#235d40}
+      .card{width:min(360px,calc(100vw - 24px));padding:13px 14px;border:1px solid #111;border-radius:13px;background:#fff;color:#111;box-shadow:0 10px 38px #15223830}
+      .card.high{border-color:#c62828;background:#fff0f0;color:#111}
+      .card.review{border-color:#d4a900;background:#fff4bd;color:#111}
+      .card.safe{border-color:#27834a;background:#eff9f1;color:#111}
       .row{display:flex;align-items:flex-start;gap:10px}.copy{min-width:0;flex:1}.title{font-size:13px;font-weight:750;line-height:1.35}.detail{margin-top:4px;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
-      .actions{display:flex;gap:8px;margin-top:10px}.actions button{border:1px solid #d3dbea;border-radius:8px;padding:7px 10px;background:white;color:#263750;font-size:11px;font-weight:700;cursor:pointer}.actions .primary{border-color:#a33139;background:#a33139;color:white}.dismiss{border:0;background:transparent;color:inherit;font-size:18px;line-height:1;cursor:pointer}
+      .actions{display:flex;gap:8px;margin-top:10px}.actions button{border:1px solid #111;border-radius:8px;padding:7px 10px;background:white;color:#111;font-size:11px;font-weight:700;cursor:pointer}.actions .primary{border-color:#111;background:#111;color:white}.dismiss{border:0;background:transparent;color:inherit;font-size:18px;line-height:1;cursor:pointer}
       ul{margin:7px 0 0;padding-left:17px;font-size:11px;line-height:1.45}
     `;
     const card = document.createElement("section");
@@ -210,13 +212,14 @@
     const anchor = event.composedPath().find((node) => node instanceof HTMLAnchorElement);
     if (!anchor) return;
     const result = ratings.get(anchor.href);
-    if (result?.risk_level !== "High") return;
+    if (!result || !["High", "Review"].includes(result.risk_level)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
-    const card = showNotice("link", "This link looks risky", `${result.host} · ${result.risk_score}/100`, result.signals || [], [
+    const highRisk = result.risk_level === "High";
+    const card = showNotice("link", highRisk ? "This link has danger signs" : "Review this indirect or suspicious link", `${result.host} · ${result.risk_score}/100`, result.signals || [], [
       { label: "Stay here", run: () => removeBadge("link") },
       { label: "Open anyway", primary: true, run: () => { const href = anchor.href; const newTab = anchor.target === "_blank"; removeBadge("link"); if (newTab) window.open(href, "_blank", "noopener"); else location.assign(href); } },
-    ]);
+    ], highRisk ? "high" : "review");
     card.setAttribute("role", "alertdialog");
   }
 
@@ -275,6 +278,7 @@
         if (!sender && !subject && !body) return null;
         const previewId = row.getAttribute("data-legacy-thread-id") || row.querySelector('a[href*="#"]')?.getAttribute("href") || `visible-${index}`;
         row.dataset.alerterPreviewId = previewId;
+        inboxPreviewRows.set(previewId, row);
         return {
           subject,
           sender,
@@ -288,38 +292,104 @@
       .filter(Boolean);
   }
 
+  function extractVisibleOutlookPreviews() {
+    if (!["outlook.live.com", "outlook.office.com", "outlook.office365.com"].includes(location.hostname.toLowerCase())) return [];
+    const isVisible = (element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden"
+        && rect.bottom > 0 && rect.top < window.innerHeight;
+    };
+    const options = [...document.querySelectorAll('[role="option"]')].filter(isVisible);
+    const rows = options.length
+      ? options
+      : [...document.querySelectorAll('[role="listitem"],[role="row"]')].filter(isVisible);
+    return rows.map((row, index) => {
+      const text = (row.innerText || "").trim();
+      if (text.length < 20 || text.length > 2500) return null;
+      const senderNode = row.querySelector("[email]") || row.querySelector('[data-testid*="sender"]') || row.querySelector('[title*="@"]');
+      const subjectNode = row.querySelector('[data-testid*="subject"]') || row.querySelector('[role="heading"]');
+      const sender = (senderNode?.getAttribute("email") || senderNode?.getAttribute("title") || senderNode?.innerText || "").trim().slice(0, 320);
+      const subject = (subjectNode?.innerText || text.split("\n").find((line) => line.trim()) || "").trim().slice(0, 250);
+      const previewId = row.getAttribute("data-convid") || row.getAttribute("data-itemid")
+        || row.id || row.querySelector("a[href]")?.getAttribute("href") || `visible-${index}`;
+      row.dataset.alerterPreviewId = previewId;
+      inboxPreviewRows.set(previewId, row);
+      return {
+        subject,
+        sender,
+        sender_name: senderNode?.innerText?.trim().slice(0, 120) || "",
+        body: text.slice(0, 700),
+        link_pairs: [],
+        preview_only: true,
+        preview_id: previewId,
+      };
+    }).filter(Boolean);
+  }
+
   function highlightInboxPreview(email, result) {
-    const row = [...document.querySelectorAll("tr.zA")]
-      .find((item) => item.dataset.alerterPreviewId === email.preview_id);
+    const row = inboxPreviewRows.get(email.preview_id)
+      || [...document.querySelectorAll("tr.zA")].find((item) => item.dataset.alerterPreviewId === email.preview_id);
     if (!row) return;
     const level = String(result.risk_level || "").toLowerCase();
-    if (level === "high" || level === "review") {
-      row.dataset.alerterRisk = level;
-      row.title = `Alerter: ${result.risk_level} risk (${result.risk_score}/100). ${(result.signals || []).slice(0, 2).join("; ")}`;
-    } else {
-      delete row.dataset.alerterRisk;
-      if ((row.title || "").startsWith("Alerter:")) row.removeAttribute("title");
+    const verdict = level === "high" ? "danger" : level === "review" ? "review" : "clear";
+    row.dataset.alerterRisk = verdict;
+    row.title = `Alerter: ${level === "high" ? "Danger" : level === "review" ? "Review" : "No obvious issue"} (${result.risk_score}/100). ${(result.signals || []).slice(0, 2).join("; ")}`;
+    let badge = row.querySelector(".alerter-email-verdict");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "alerter-email-verdict";
+      badge.setAttribute("aria-label", "Alerter email scan result");
+      const subject = row.querySelector(".bog") || row.querySelector(".y6 span") || row.querySelector(".y6") || row.firstElementChild;
+      subject?.insertBefore(badge, subject.firstChild);
     }
+    badge.textContent = verdict === "danger" ? "DANGER" : verdict === "review" ? "REVIEW" : "NO OBVIOUS ISSUE";
+    badge.dataset.verdict = verdict;
     if (!document.getElementById("__alerterInboxStyles")) {
       const style = document.createElement("style");
       style.id = "__alerterInboxStyles";
-      style.textContent = 'tr[data-alerter-risk="high"]{box-shadow:inset 4px 0 #c43b43!important;background:#fff0f0!important}tr[data-alerter-risk="review"]{box-shadow:inset 4px 0 #b76e00!important;background:#fff8e9!important}';
+      style.textContent = '[data-alerter-risk="danger"]{box-shadow:inset 4px 0 #c62828!important;background:#fff2f2!important}[data-alerter-risk="review"]{box-shadow:inset 4px 0 #d4a900!important;background:#fff9d9!important}[data-alerter-risk="clear"]{box-shadow:inset 4px 0 #27834a!important;background:#f1faf3!important}.alerter-email-verdict{display:inline-block;margin:0 7px 2px 0;padding:2px 6px;border:1px solid #111;border-radius:999px;background:#fff;color:#111;font:700 9px/1.35 system-ui,sans-serif;vertical-align:middle}.alerter-email-verdict[data-verdict="danger"]{border-color:#c62828;background:#c62828;color:#fff}.alerter-email-verdict[data-verdict="review"]{border-color:#d4a900;background:#ffe66d;color:#111}.alerter-email-verdict[data-verdict="clear"]{border-color:#27834a;background:#27834a;color:#fff}';
       (document.head || document.documentElement).append(style);
     }
   }
 
-  async function scanVisibleGmailInbox() {
+  function summarizeVisibleEmailPreviews(previews) {
+    const checked = previews.map((email) => inboxResults.get(email.preview_id)).filter(Boolean);
+    if (!checked.length) return;
+    const danger = checked.filter((result) => result.risk_level === "High").length;
+    const review = checked.filter((result) => result.risk_level === "Review").length;
+    const clear = checked.length - danger - review;
+    const tone = danger ? "high" : review ? "review" : "safe";
+    const subject = danger ? "Dangerous-looking email preview found" : review ? "Some email previews need review" : "No obvious issues in visible email previews";
+    const detail = `${checked.length} visible email${checked.length === 1 ? "" : "s"} checked · ${clear} green · ${review} yellow · ${danger} red. Only visible previews are checked; open a message for its full scan.`;
+    showNotice("email", subject, detail, [], [], tone);
+  }
+
+  function extractVisibleMailPreviews() {
+    return location.hostname.toLowerCase() === "mail.google.com"
+      ? extractVisibleGmailPreviews()
+      : extractVisibleOutlookPreviews();
+  }
+
+  async function scanVisibleMailPreviews(showSummary = true) {
     if (scanningInbox) {
       inboxRescanPending = true;
       return;
     }
-    const previews = extractVisibleGmailPreviews();
+    const previews = extractVisibleMailPreviews();
     if (!previews.length) return;
+    for (const email of previews) {
+      const previousResult = inboxResults.get(email.preview_id);
+      if (previousResult) highlightInboxPreview(email, previousResult);
+    }
     const pending = previews.filter((email) => {
       const fingerprint = `${email.subject}|${email.sender}|${email.body}`;
       return inboxFingerprints.get(email.preview_id) !== fingerprint;
     });
-    if (!pending.length) return;
+    if (!pending.length) {
+      if (showSummary) summarizeVisibleEmailPreviews(previews);
+      return;
+    }
     scanningInbox = true;
     try {
       const newHighRisk = [];
@@ -329,6 +399,7 @@
           if (!response?.ok) throw new Error(response?.error || "Alerter could not check this message.");
           const fingerprint = `${email.subject}|${email.sender}|${email.body}`;
           inboxFingerprints.set(email.preview_id, fingerprint);
+          inboxResults.set(email.preview_id, response.result);
           highlightInboxPreview(email, response.result);
           return { email, result: response.result };
         }));
@@ -337,16 +408,17 @@
       }
       for (const { email } of newHighRisk) notifiedInboxEmails.add(email.preview_id);
       if (newHighRisk.length) {
-        showNotice("email", "Alerter found a risky email preview", `${newHighRisk.length} visible Gmail preview${newHighRisk.length === 1 ? " has" : "s have"} high-risk warning signs. Open a message for the full scan.`, newHighRisk.slice(0, 3).map(({ email, result }) => `${email.sender_name || email.sender || "Sender"} · ${result.risk_score}/100`), [], "high");
-        notifyThreat("Alerter flagged a Gmail preview", "A visible email preview shows phishing or spam warning signs. Open the message and scan it for a full report.");
+        notifyThreat("Alerter flagged an email preview", "A visible email preview shows phishing or spam warning signs. Open the message and scan it for a full report.");
       }
+      if (showSummary) summarizeVisibleEmailPreviews(previews);
     } catch (error) {
-      console.warn("Alerter Gmail preview scan skipped:", error.message);
+      console.warn("Alerter email preview scan skipped:", error.message);
+      showNotice("email", "Alerter could not scan these emails", "Check that Alerter is enabled, then reload your mail page. Messages without a result are not marked as safe.", [], [], "review");
     } finally {
       scanningInbox = false;
       if (inboxRescanPending) {
         inboxRescanPending = false;
-        setTimeout(() => void scanVisibleGmailInbox(), 250);
+        setTimeout(() => void scanVisibleMailPreviews(), 250);
       }
     }
   }
@@ -359,15 +431,15 @@
     }
     const fingerprint = `${location.pathname}|${email.subject}|${email.sender}|${email.body}`;
     if (!showFailure && fingerprint === lastEmailFingerprint) return { ok: true, skipped: true };
-    lastEmailFingerprint = fingerprint;
     const response = await chrome.runtime.sendMessage({ type: "analyze-email", email });
     if (!response?.ok) {
       if (showFailure) showNotice("email", "Alerter could not check this message", response?.error || "Try the scan again.");
       return { ok: false, error: response?.error || "Email check failed" };
     }
+    lastEmailFingerprint = fingerprint;
     const result = response.result;
     const summary = `${result.risk_level} risk · ${result.risk_score}/100 · ${result.category}`;
-    const tone = result.risk_level === "High" ? "high" : result.risk_level === "Low" ? "safe" : "email";
+    const tone = result.risk_level === "High" ? "high" : result.risk_level === "Low" ? "safe" : "review";
     showNotice("email", "Email scan complete", summary, result.signals || [], [], tone);
     if (result.risk_level === "High") {
       notifyThreat("Alerter flagged an email", "The open message shows phishing or spam warning signs. Open Alerter to review the reasons.");
@@ -380,12 +452,25 @@
     if (!["mail.google.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com"].includes(host)) return;
     clearTimeout(emailTimer);
     emailTimer = setTimeout(() => {
-      if (host === "mail.google.com" && !extractOpenEmail().found) {
-        void scanVisibleGmailInbox();
-      } else {
+      const openMessage = extractOpenEmail().found;
+      void scanVisibleMailPreviews(!openMessage);
+      if (openMessage) {
         void scanOpenEmail(false).catch((error) => console.warn("Email scan skipped:", error.message));
       }
     }, delay);
+  }
+
+  function installMailScanStatus() {
+    if (!["mail.google.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com"].includes(location.hostname.toLowerCase())) return;
+    const bannerId = "__alerter-auto-scan-status";
+    if (document.getElementById(bannerId)) return;
+    const banner = document.createElement("div");
+    banner.id = bannerId;
+    banner.setAttribute("role", "status");
+    banner.textContent = "Alerter is automatically checking visible mail…";
+    banner.style.cssText = "position:fixed;z-index:2147483646;top:8px;left:50%;transform:translateX(-50%);padding:7px 12px;border:1px solid #111;border-radius:8px;background:#fff;color:#111;font:600 12px system-ui,sans-serif;box-shadow:0 2px 12px #0003;pointer-events:none";
+    (document.body || document.documentElement).append(banner);
+    setTimeout(() => banner.remove(), 5000);
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -395,7 +480,7 @@
       sendResponse({ ...email, inbox_emails: [] });
       return false;
     }
-    sendResponse({ ...email, inbox_emails: extractVisibleGmailPreviews() });
+    sendResponse({ ...email, inbox_emails: extractVisibleMailPreviews() });
     return false;
   });
 
@@ -403,10 +488,12 @@
   window.addEventListener("scroll", () => scheduleEmailScan(350), { capture: true, passive: true });
   queuePageLinks();
   schedulePageScan();
+  installMailScanStatus();
   scheduleEmailScan();
   const observer = new MutationObserver((records) => {
     for (const record of records) for (const node of record.addedNodes || []) if (node.nodeType === 1) queuePageLinks(node);
     schedulePageScan();
+    installMailScanStatus();
     scheduleEmailScan();
   });
   if (document.documentElement) observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });

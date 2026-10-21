@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Alerter — Phishing & Spam Protection",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "Automatically checks websites and email, warns on risky destinations, and blocks common ad requests on your device.",
   "permissions": ["activeTab", "notifications", "declarativeNetRequest"],
   "host_permissions": ["http://*/*", "https://*/*"],

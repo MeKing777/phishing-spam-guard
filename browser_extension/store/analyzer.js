@@ -13,6 +13,7 @@ self.AlerterAnalyzer = (() => {
     [/\b(unsubscribe|buy now|order now|special offer|discount)\b/i, 6, "Promotional or bulk-message language"],
   ];
   const shorteners = new Set(["bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "rb.gy", "rebrand.ly", "shorturl.at"]);
+  const redirectParams = new Set(["url", "u", "target", "destination", "redirect", "redirecturl", "redirecturi", "redir", "next", "continue", "continueurl", "continueuri", "return", "returnto", "returnurl", "returnuri", "out", "to", "link", "goto", "forward", "forwardurl"]);
   const brands = {
     adobe: ["adobe.com"], amazon: ["amazon.com"], apple: ["apple.com", "icloud.com"],
     dropbox: ["dropbox.com"], docusign: ["docusign.com"], google: ["google.com", "gmail.com", "googlemail.com"],
@@ -70,7 +71,7 @@ self.AlerterAnalyzer = (() => {
     return urls;
   }
 
-  function analyzeUrl(value) {
+  function analyzeUrl(value, depth = 0) {
     const url = String(value || "");
     const signals = [];
     let score = 0;
@@ -95,11 +96,22 @@ self.AlerterAnalyzer = (() => {
       score += claim.lookalike ? 35 : 30;
       signals.push(`${claim.lookalike ? "Resembles" : "Uses"} the ${claim.brand[0].toUpperCase()}${claim.brand.slice(1)} name on a domain outside its known domains`);
     }
-    if (shorteners.has(host)) { score += 15; signals.push("Uses a link-shortening service that hides the destination"); }
+    if (shorteners.has(host)) { score = Math.max(score + 15, 25); signals.push("Uses a link-shortening service that hides the destination"); }
     if (host.split(".").length >= 5) { score += 12; signals.push("Contains several nested subdomains"); }
     if (parsed.protocol.toLowerCase() !== "https:") { score += 8; signals.push("Does not use HTTPS"); }
     if (/(?:login|verify|account|secure|password|wallet|payment|signin)/i.test(host + parsed.pathname)) {
       score += 7; signals.push("Contains account or payment wording in the domain or path");
+    }
+    if (depth < 2) {
+      for (const [key, target] of parsed.searchParams) {
+        if (!redirectParams.has(key.toLowerCase().replace(/[_-]/g, "")) || !/^https?:\/\//i.test(target)) continue;
+        const nested = analyzeUrl(target, depth + 1);
+        if (nested.risk_score >= 25) {
+          score = Math.max(score, nested.risk_score);
+          signals.push(`Redirect parameter points to ${nested.host} (${nested.risk_level} risk)`);
+          break;
+        }
+      }
     }
     score = Math.min(score, 100);
     const riskLevel = score >= 55 ? "High" : score >= 25 ? "Review" : "Low";
