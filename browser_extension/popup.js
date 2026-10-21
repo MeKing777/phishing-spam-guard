@@ -7,6 +7,7 @@ const checkButton = document.getElementById("check");
 const emailButton = document.getElementById("scan-email");
 const screenButton = document.getElementById("scan-screen");
 const screenHelp = document.getElementById("scan-help");
+const adBlockerButton = document.getElementById("ad-blocker");
 const mailHosts = new Set(["mail.google.com", "outlook.live.com", "outlook.office.com", "outlook.office365.com"]);
 let activeTab;
 
@@ -182,6 +183,20 @@ function captureVisibleTab(windowId) {
   });
 }
 
+async function updateAdBlockerStatus() {
+  adBlockerButton.disabled = true;
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "ad-blocker-status" });
+    if (!response?.ok) throw new Error(response?.error || "Could not read ad-blocking status.");
+    adBlockerButton.setAttribute("aria-checked", String(response.enabled));
+  } catch (error) {
+    adBlockerButton.setAttribute("aria-checked", "false");
+    adBlockerButton.title = error.message;
+  } finally {
+    adBlockerButton.disabled = false;
+  }
+}
+
 async function updateServiceStatus() {
   try {
     const status = await runLocalCheck("checker-status");
@@ -206,6 +221,22 @@ async function updateServiceStatus() {
     notice.textContent = "Alerter checks are unavailable. Reload the extension and try again.";
   }
 }
+
+adBlockerButton.addEventListener("click", async () => {
+  const enabled = adBlockerButton.getAttribute("aria-checked") !== "true";
+  adBlockerButton.disabled = true;
+  try {
+    const response = await chrome.runtime.sendMessage({ type: "set-ad-blocking", enabled });
+    if (!response?.ok) throw new Error(response?.error || "Could not update ad-blocking settings.");
+    adBlockerButton.setAttribute("aria-checked", String(response.enabled));
+    adBlockerButton.title = "Block common ads and trackers";
+  } catch (error) {
+    notice.classList.add("error");
+    notice.textContent = error.message || "Could not update ad-blocking settings.";
+  } finally {
+    adBlockerButton.disabled = false;
+  }
+});
 
 checkButton.addEventListener("click", async () => {
   if (!activeTab?.url) return;
@@ -264,3 +295,4 @@ emailButton.addEventListener("click", async () => {
 });
 
 void updateServiceStatus();
+void updateAdBlockerStatus();

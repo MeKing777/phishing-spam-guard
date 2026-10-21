@@ -1,12 +1,17 @@
 {
   "manifest_version": 3,
   "name": "Alerter — Phishing & Spam Protection",
-  "version": "2.0.1",
-  "description": "Checks web links and visible email messages for phishing and spam warning signs on your device.",
-  "permissions": ["activeTab", "notifications"],
+  "version": "2.0.2",
+  "description": "Automatically checks websites and email, warns on risky destinations, and blocks common ad requests on your device.",
+  "permissions": ["activeTab", "notifications", "declarativeNetRequest"],
   "host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "scripts": ["analyzer.js", "background.js"]
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      { "id": "basic_ads", "enabled": true, "path": "rules/ads.json" }
+    ]
   },
   "browser_specific_settings": {
     "gecko": {

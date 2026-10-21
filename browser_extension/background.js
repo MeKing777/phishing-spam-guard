@@ -44,6 +44,22 @@ function notifyThreat(message, sendResponse) {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (sender.id !== chrome.runtime.id) return false;
   if (message?.type === "notify-threat") return notifyThreat(message, sendResponse);
+  if (message?.type === "ad-blocker-status") {
+    chrome.declarativeNetRequest.getEnabledRulesets()
+      .then((ids) => sendResponse({ ok: true, enabled: ids.includes("basic_ads") }))
+      .catch((error) => sendResponse({ ok: false, error: error.message || "Could not read ad-blocking status." }));
+    return true;
+  }
+  if (message?.type === "set-ad-blocking") {
+    const enabled = message.enabled === true;
+    chrome.declarativeNetRequest.updateEnabledRulesets({
+      enableRulesetIds: enabled ? ["basic_ads"] : [],
+      disableRulesetIds: enabled ? [] : ["basic_ads"],
+    })
+      .then(() => sendResponse({ ok: true, enabled }))
+      .catch((error) => sendResponse({ ok: false, error: error.message || "Could not update ad-blocking settings." }));
+    return true;
+  }
 
   const routes = {
     "checker-status": ["/health", {}],

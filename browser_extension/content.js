@@ -6,7 +6,9 @@
   const seen = new Set();
   let checking = false;
   let linkTimer;
+  let pageScanTimer;
   let emailTimer;
+  let checkedPageUrl = "";
   let lastEmailFingerprint = "";
   let notifiedHigh = false;
   let scanningInbox = false;
@@ -27,6 +29,7 @@
       *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
       .card{width:min(360px,calc(100vw - 24px));padding:13px 14px;border:1px solid #ead2a0;border-radius:13px;background:#fff9ec;color:#563d11;box-shadow:0 10px 38px #15223830}
       .card.high{border-color:#f0bec2;background:#fff1f1;color:#772c32}
+      .card.review{border-color:#f2ddb1;background:#fffcf4;color:#73520f}
       .card.safe{border-color:#c9e5d5;background:#eff9f3;color:#235d40}
       .row{display:flex;align-items:flex-start;gap:10px}.copy{min-width:0;flex:1}.title{font-size:13px;font-weight:750;line-height:1.35}.detail{margin-top:4px;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
       .actions{display:flex;gap:8px;margin-top:10px}.actions button{border:1px solid #d3dbea;border-radius:8px;padding:7px 10px;background:white;color:#263750;font-size:11px;font-weight:700;cursor:pointer}.actions .primary{border-color:#a33139;background:#a33139;color:white}.dismiss{border:0;background:transparent;color:inherit;font-size:18px;line-height:1;cursor:pointer}
@@ -107,6 +110,36 @@
         void chrome.runtime.lastError;
       });
     } catch {}
+  }
+
+  async function scanCurrentPage() {
+    const url = location.href;
+    if (!/^https?:$/.test(location.protocol) || checkedPageUrl === url) return;
+    checkedPageUrl = url;
+    try {
+      const response = await chrome.runtime.sendMessage({ type: "analyze-url", url });
+      if (!response?.ok) throw new Error(response?.error || "Alerter could not check this website.");
+      if (location.href !== url) return;
+      const result = response.result;
+      if (!result || result.risk_level === "Low") return;
+      const highRisk = result.risk_level === "High";
+      showNotice(
+        "link",
+        highRisk ? "This website has high-risk warning signs" : "Review this website",
+        `${result.host || location.hostname} · ${result.risk_score}/100`,
+        result.signals || [],
+        [],
+        highRisk ? "high" : "review",
+      );
+      if (highRisk) notifyThreat("Alerter flagged this website", `The current page ${result.host || location.hostname} has high-risk warning signs.`);
+    } catch (error) {
+      console.warn("Alerter website scan skipped:", error.message);
+    }
+  }
+
+  function schedulePageScan() {
+    clearTimeout(pageScanTimer);
+    pageScanTimer = setTimeout(() => void scanCurrentPage(), 500);
   }
 
   function queuePageLinks(root = document) {
@@ -369,10 +402,14 @@
   document.addEventListener("click", highRiskClick, true);
   window.addEventListener("scroll", () => scheduleEmailScan(350), { capture: true, passive: true });
   queuePageLinks();
+  schedulePageScan();
   scheduleEmailScan();
   const observer = new MutationObserver((records) => {
     for (const record of records) for (const node of record.addedNodes || []) if (node.nodeType === 1) queuePageLinks(node);
+    schedulePageScan();
     scheduleEmailScan();
   });
   if (document.documentElement) observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["href"] });
+  window.addEventListener("popstate", schedulePageScan);
+  window.addEventListener("hashchange", schedulePageScan);
 })();

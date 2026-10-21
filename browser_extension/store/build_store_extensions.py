@@ -24,6 +24,7 @@ def build() -> None:
         for filename in ("analyzer.js", "background.js"):
             shutil.copy2(STORE_ROOT / filename, output / filename)
         shutil.copytree(icons, output / "icons")
+        shutil.copytree(EXTENSION_ROOT / "rules", output / "rules")
         manifest = json.loads((STORE_ROOT / f"manifest.{browser}.json").read_text(encoding="utf-8"))
         (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
         archive = BUILD_ROOT / f"Alerter-{browser.title()}-Store.zip"

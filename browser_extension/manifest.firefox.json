@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Alerter — Phishing & Spam Protection",
-  "version": "1.1.1",
-  "description": "Checks web links, email messages, and user-requested visible screen text with local phishing and spam analysis.",
-  "permissions": ["activeTab", "notifications"],
+  "version": "1.1.2",
+  "description": "Automatically checks websites and email for phishing, warns on risky destinations, and blocks common ad requests.",
+  "permissions": ["activeTab", "notifications", "declarativeNetRequest"],
   "host_permissions": [
     "http://*/*",
     "https://*/*",
@@ -12,6 +12,11 @@
   "background": {
     "scripts": ["background.js"],
     "service_worker": "background.js"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      { "id": "basic_ads", "enabled": true, "path": "rules/ads.json" }
+    ]
   },
   "browser_specific_settings": {
     "gecko": {
