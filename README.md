@@ -72,7 +72,14 @@ Background scanning requires access to pages the extension checks, including web
 
 ## Browser-store edition
 
-The self-contained store edition is in `browser_extension/store/`. It performs URL and email checks inside the extension, so each user's message content stays on their device and no local Python service is needed. It includes automatic website checks, redirect-parameter checks and click warnings, a limited built-in ad/tracker blocker, visible Gmail/Outlook preview labels, and automatic open-message checks; screen OCR remains available only in the local desktop edition. Mail scanning checks only messages currently visible in the page and those exposed as you scroll; it does not fetch the entire mailbox. Run `python browser_extension\store\build_store_extensions.py` to create Chromium and Firefox store-upload ZIPs in `browser_extension/store/build/`.
+The self-contained store edition is in `browser_extension/store/`. It performs URL and email checks inside the extension, so each user's message content stays on their device and no local Python service is needed. It includes automatic website checks, redirect-parameter checks and click warnings, a limited built-in ad/tracker blocker, visible Gmail/Outlook preview labels, and automatic open-message checks; screen OCR remains available only in the local desktop edition. Mail scanning checks only messages currently visible in the page and those exposed as you scroll; it does not fetch the entire mailbox.
+
+Download the browser packages directly from this repository:
+
+- [Chromium (Chrome, Edge, Brave)](browser_extension/store/Alerter-Chromium-Store.zip)
+- [Mozilla Firefox](browser_extension/store/Alerter-Firefox-Store.zip)
+
+Run `python browser_extension\store\build_store_extensions.py` to regenerate the store-upload ZIPs in `browser_extension/store/build/`.
 
 ## Optional local LLM
 

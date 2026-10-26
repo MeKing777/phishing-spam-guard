@@ -12,4 +12,4 @@ Build the Chromium and Firefox upload archives from the project root with:
 python browser_extension\store\build_store_extensions.py
 ```
 
-The resulting ZIP files are written to `browser_extension/store/build/`. They are prepared for store review but are not published to a store. Read [PRIVACY.md](PRIVACY.md) when preparing the listing.
+Ready-to-download packages are also available in this folder: [Chromium](Alerter-Chromium-Store.zip) and [Firefox](Alerter-Firefox-Store.zip). The build command writes fresh ZIP files to `browser_extension/store/build/`; copy them here when preparing an updated public release. These packages are prepared for store review but are not published to a store. Read [PRIVACY.md](PRIVACY.md) when preparing the listing.

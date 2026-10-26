@@ -21,6 +21,7 @@ token-*.json
 browser_extension/build/
 browser_extension/store/build/
 *.zip
+!browser_extension/store/Alerter-*-Store.zip
 data/training_sources/
 models/
 *.csproj.user
