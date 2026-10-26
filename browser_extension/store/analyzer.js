@@ -4,13 +4,13 @@ self.AlerterAnalyzer = (() => {
     [/\b(verify|confirm|restore|unlock|suspend(?:ed)?|secure)\b.{0,55}\b(account|password|identity|payment|mailbox)\b/i, 18, "Urgent account or identity verification language"],
     [/\b(password|login|sign in|credentials|one[- ]time code|security code)\b.{0,70}\b(click|link|reply|confirm|verify|submit|send)\b/i, 25, "Asks for credentials or a security code"],
     [/\b(click|tap|follow)\b.{0,35}\b(link|here|below)\b/i, 8, "Pressures the reader to follow a link"],
-    [/\b(invoice|wire transfer|bank account|payment overdue|payment required|crypto(?:currency)?|wallet)\b/i, 12, "Requests or discusses a sensitive payment action"],
+    [/\b(?:invoice|wire transfer|bank account|bank transfer|payment|crypto(?:currency)?|wallet)\b.{0,55}\b(?:overdue|past due|required|failed|confirm|verify|update|pay|send|transfer|settle)\b|\b(?:pay|send|transfer|confirm|verify|update|settle)\b.{0,55}\b(?:invoice|bank account|bank transfer|payment|crypto(?:currency)?|wallet)\b/i, 12, "Requests or discusses a sensitive payment action"],
   ];
   const spamPatterns = [
-    [/\b(congratulations|you(?:'|’)ve won|winner|prize|gift card|claim your|free entry)\b/i, 18, "Prize, giveaway, or free-reward language"],
+    [/\b(?:you(?:'|’)ve won|winner|prize|gift card|giveaway|free entry|claim (?:your|a|an|the) (?:free )?(?:prize|gift|reward|voucher)|win (?:a|the) (?:free )?(?:prize|gift|reward|voucher))\b/i, 18, "Prize, giveaway, or free-reward language"],
     [/\b(earn money|make money fast|guaranteed income|work from home|get rich)\b/i, 16, "Unsolicited income or guaranteed-return language"],
-    [/\b(limited time|act now|urgent|expires today|last chance)\b/i, 8, "Creates urgency to prompt a quick response"],
-    [/\b(unsubscribe|buy now|order now|special offer|discount)\b/i, 6, "Promotional or bulk-message language"],
+    [/\b(?:limited[- ]time offer|act now|urgent|expires today|last chance)\b/i, 8, "Creates urgency to prompt a quick response"],
+    [/\b(?:buy now|order now|special offer|discount|sale ends|promotional offer)\b/i, 6, "Promotional or bulk-message language"],
   ];
   const shorteners = new Set(["bit.ly", "tinyurl.com", "t.co", "is.gd", "cutt.ly", "rb.gy", "rebrand.ly", "shorturl.at"]);
   const redirectParams = new Set(["url", "u", "target", "destination", "redirect", "redirecturl", "redirecturi", "redir", "next", "continue", "continueurl", "continueuri", "return", "returnto", "returnurl", "returnuri", "out", "to", "link", "goto", "forward", "forwardurl"]);
@@ -20,6 +20,8 @@ self.AlerterAnalyzer = (() => {
     microsoft: ["microsoft.com", "microsoftonline.com", "office.com", "outlook.com", "live.com"],
     netflix: ["netflix.com"], paypal: ["paypal.com", "paypalobjects.com"], yahoo: ["yahoo.com"],
   };
+  // Narrow exception for AWS training notices sent by its certification platform.
+  const delegatedSenderDomains = { amazon: new Set(["credly.com"]) };
   const freeEmailDomains = new Set(["aol.com", "gmail.com", "googlemail.com", "hotmail.com", "icloud.com", "live.com", "outlook.com", "yahoo.com"]);
   const riskyExtensions = new Set(["ade", "adp", "app", "bat", "cab", "cmd", "com", "cpl", "exe", "hta", "img", "iso", "jar", "js", "jse", "lnk", "msi", "ps1", "scr", "vbe", "vbs", "wsf", "wsh"]);
   const reviewExtensions = new Set(["docm", "dotm", "html", "htm", "iso", "pptm", "xlam", "xlsm", "xltm"]);
@@ -162,7 +164,7 @@ self.AlerterAnalyzer = (() => {
 
     for (const [brand, officialDomains] of Object.entries(brands)) {
       if (new RegExp(`\\b${brand}\\b`, "i").test(senderName) && (
-        freeEmailDomains.has(senderDomain) || !officialDomains.some((domain) => senderDomain === domain || senderDomain.endsWith(`.${domain}`))
+        freeEmailDomains.has(senderDomain) || ![...officialDomains, ...(delegatedSenderDomains[brand] || [])].some((domain) => senderDomain === domain || senderDomain.endsWith(`.${domain}`))
       )) {
         score += 30;
         signals.push(`Sender display name claims ${brand[0].toUpperCase()}${brand.slice(1)}, but its email domain is different`);

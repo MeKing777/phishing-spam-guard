@@ -98,14 +98,18 @@ Then restart the dashboard and enable **Use the optional ML phishing classifier*
 
 ## Locally trained email and URL models
 
-The local Python scanner can use two compact, on-device classifiers trained from
-pinned public datasets. Email training combines a CC0 spam/ham corpus with a
-phishing-email corpus declared LGPL-3.0. URL training uses the CC BY 4.0
-Hannousse–Yahiouche academic phishing-URL benchmark. Dataset citations,
-revision-pinned download URLs, class counts, grouped holdout metrics, and
-limitations are written to `data/threat_intelligence/training_report.json`.
-The raw downloads are kept in the ignored `data/training_sources/` directory;
-they are not uploaded, committed, or sent to MongoDB.
+The local Python scanner can use compact, on-device classifiers trained from
+pinned public datasets. The checked-in training report records 47,573 unique
+labeled emails across benign, spam, and phishing classes, plus 11,427 labeled
+URLs across legitimate and phishing classes. Email training combines a CC0
+spam/ham corpus with a phishing-email corpus declared LGPL-3.0. URL training
+uses the CC BY 4.0 Hannousse–Yahiouche academic phishing-URL benchmark. Dataset
+citations, revision-pinned download URLs, class counts, grouped holdout metrics,
+and limitations are written to `data/threat_intelligence/training_report.json`.
+The raw downloads are kept in the ignored `data/training_sources/` directory
+and are not committed. The Atlas loader uploads the labeled public corpus only
+when you run it with a locally configured `MONGODB_URI`; it never reads inbox
+content or browsing history.
 
 To train or reproduce the models locally:
 
@@ -124,6 +128,9 @@ when achievable. The model alone never upgrades a message or URL to High.
 Heuristic checks still run, and the browser-store edition remains its own
 JavaScript-only detector.
 
+The Atlas loader can store the labeled public corpora in separate email/URL
+collections and grouped train/validation/test splits. Loading data does not
+train or power live scans; the local classifier uses its local model files.
 These corpora are historical and source-biased, not a live threat feed. Email
 near-duplicates, source overlap, current campaign drift, and real-world class
 prevalence limit the metrics. Email test data is held out by exact normalized

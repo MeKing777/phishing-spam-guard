@@ -1,35 +1,39 @@
-# Synthetic threat-classification seed data
+# Threat-classification datasets
 
 This folder is generated locally by `python -m tools.build_threat_dataset`.
 It contains separate `train.jsonl` and `test.jsonl` files with synthetic
-examples labelled `benign`, `spam`, `phishing`, or `harmful_url`. All records
+examples labelled `benign`, `spam`, `phishing`, or `harmful_url`. The benign
+email holdout includes a congratulatory course-badge message so that this
+ordinary message type is represented separately from prize and giveaway spam.
+All records
 are marked `source: synthetic` and `is_synthetic: true`; `.test` and `.invalid`
 domains are reserved examples, not live threat indicators.
 
-**This is plumbing/demo data, not a trained or validated detector and not a
-real-world threat-intelligence feed.** Synthetic examples are deliberately
-simple and must not be used to decide whether real users' mail or URLs are
-safe. To build a useful classifier, replace or augment this seed with
-lawfully obtained, representative, independently labelled data; split by
-campaign/domain/source to avoid train/test leakage; and measure per-class
-precision, recall, false-positive rates, and calibration before deployment.
+These JSONL files are synthetic pipeline fixtures, not production training
+data or a real-world threat-intelligence feed. Synthetic examples are
+deliberately simple and must not be used to decide whether real users' mail or
+URLs are safe. The Atlas loader uses the larger pinned public corpora described
+below instead of uploading these fixtures.
 
 ## Load into MongoDB Atlas
 
 1. Create a Free cluster and database user in Atlas. Add your current public
    IP address to the project's network access list.
-2. Install the optional driver: `pip install -r requirements-atlas.txt`.
+2. Install the data and database dependencies: `pip install -r requirements-atlas.txt`.
 3. Set `MONGODB_URI` locally to the Atlas `mongodb+srv://...` connection
    string. Do not put the URI in source control, the browser extension, or
    chat. The database user should have write access only to the target database.
 4. Run `python -m tools.load_atlas_dataset`.
 
-The loader idempotently upserts only the generated synthetic records into
-`alerter_training.train_samples` and `alerter_training.test_samples` by
-default. Set `ALERTER_MONGODB_DATABASE` to use another database name. It
-does not read or upload inbox contents, messages, or browsing history. Atlas
-is a data store; loading examples alone does not train the current Alerter
-heuristics or add a threat feed to live scans.
+After you run the loader, it idempotently upserts the pinned public corpora
+into `alerter_training` by default. Set `ALERTER_MONGODB_DATABASE` to use
+another database name. Email labels are `benign`, `spam`, and `phishing`; URL
+labels are `legitimate` and `phishing`. Separate collections hold the grouped
+train, validation, and test splits for each kind, and `dataset_catalog`
+records source citations, licenses, counts, and limitations. The loader uses
+only public corpora; it does not read or upload inbox contents, messages, or
+browsing history. Atlas remains a data store; loading records does not train
+or power live scans.
 
 ## Local supervised models
 

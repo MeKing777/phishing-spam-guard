@@ -18,14 +18,14 @@ PHISHING_PATTERNS = (
     (re.compile(r"\b(verify|confirm|restore|unlock|suspend(?:ed)?|secure)\b.{0,55}\b(account|password|identity|payment|mailbox)\b", re.I), 18, "Urgent account or identity verification language"),
     (re.compile(r"\b(password|login|sign in|credentials|one[- ]time code|security code)\b.{0,70}\b(click|link|reply|confirm|verify|submit|send)\b", re.I), 25, "Asks for credentials or a security code"),
     (re.compile(r"\b(click|tap|follow)\b.{0,35}\b(link|here|below)\b", re.I), 8, "Pressures the reader to follow a link"),
-    (re.compile(r"\b(invoice|wire transfer|bank account|payment overdue|payment required|crypto(?:currency)?|wallet)\b", re.I), 12, "Requests or discusses a sensitive payment action"),
+    (re.compile(r"\b(?:invoice|wire transfer|bank account|bank transfer|payment|crypto(?:currency)?|wallet)\b.{0,55}\b(?:overdue|past due|required|failed|confirm|verify|update|pay|send|transfer|settle)\b|\b(?:pay|send|transfer|confirm|verify|update|settle)\b.{0,55}\b(?:invoice|bank account|bank transfer|payment|crypto(?:currency)?|wallet)\b", re.I), 12, "Requests or discusses a sensitive payment action"),
 )
 
 SPAM_PATTERNS = (
-    (re.compile(r"\b(congratulations|you(?:'|’)ve won|winner|prize|gift card|claim your|free entry)\b", re.I), 18, "Prize, giveaway, or free-reward language"),
+    (re.compile(r"\b(?:you(?:'|’)ve won|winner|prize|gift card|giveaway|free entry|claim (?:your|a|an|the) (?:free )?(?:prize|gift|reward|voucher)|win (?:a|the) (?:free )?(?:prize|gift|reward|voucher))\b", re.I), 18, "Prize, giveaway, or free-reward language"),
     (re.compile(r"\b(earn money|make money fast|guaranteed income|work from home|get rich)\b", re.I), 16, "Unsolicited income or guaranteed-return language"),
-    (re.compile(r"\b(limited time|act now|urgent|expires today|last chance)\b", re.I), 8, "Creates urgency to prompt a quick response"),
-    (re.compile(r"\b(unsubscribe|buy now|order now|special offer|discount)\b", re.I), 6, "Promotional or bulk-message language"),
+    (re.compile(r"\b(?:limited[- ]time offer|act now|urgent|expires today|last chance)\b", re.I), 8, "Creates urgency to prompt a quick response"),
+    (re.compile(r"\b(?:buy now|order now|special offer|discount|sale ends|promotional offer)\b", re.I), 6, "Promotional or bulk-message language"),
 )
 
 SHORTENER_HOSTS = {
@@ -48,6 +48,13 @@ BRAND_DOMAINS = {
     "netflix": ("netflix.com",),
     "paypal": ("paypal.com", "paypalobjects.com"),
     "yahoo": ("yahoo.com",),
+}
+
+# Some organizations send legitimate training and certification notices through
+# a known delivery partner. Keep this narrow: it only prevents a sender-name
+# mismatch warning for Amazon training messages delivered by Credly.
+DELEGATED_SENDER_DOMAINS = {
+    "amazon": {"credly.com"},
 }
 
 FREE_EMAIL_DOMAINS = {
@@ -292,7 +299,10 @@ def analyze_email(
     for brand, official_domains in BRAND_DOMAINS.items():
         if re.search(rf"\b{re.escape(brand)}\b", display_name, re.I) and (
             sender_domain in FREE_EMAIL_DOMAINS
-            or not any(sender_domain == domain or sender_domain.endswith("." + domain) for domain in official_domains)
+            or not any(
+                sender_domain == domain or sender_domain.endswith("." + domain)
+                for domain in (*official_domains, *DELEGATED_SENDER_DOMAINS.get(brand, set()))
+            )
         ):
             score += 30
             signals.append(

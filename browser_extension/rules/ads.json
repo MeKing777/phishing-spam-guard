@@ -5,7 +5,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["doubleclick.net"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   },
   {
@@ -14,7 +14,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["googlesyndication.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   },
   {
@@ -23,7 +23,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["googleadservices.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   },
   {
@@ -32,7 +32,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["adnxs.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   },
   {
@@ -41,7 +41,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["adsrvr.org"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   },
   {
@@ -50,7 +50,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["taboola.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   },
   {
@@ -59,7 +59,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["outbrain.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   },
   {
@@ -68,7 +68,7 @@
     "action": { "type": "block" },
     "condition": {
       "requestDomains": ["criteo.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media", "other"]
+      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
     }
   }
 ]

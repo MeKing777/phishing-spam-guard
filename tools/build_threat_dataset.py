@@ -9,7 +9,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "data" / "threat_intelligence"
-DATASET_VERSION = "synthetic-v1"
+DATASET_VERSION = "synthetic-v2"
 
 EMAIL_SUBJECTS = {
     "benign": [
@@ -17,7 +17,7 @@ EMAIL_SUBJECTS = {
         "Your {service} receipt for {month}",
         "Updated schedule for {event}",
         "Document ready for your review",
-        "Weekly {team} project update",
+        "Congratulations on earning your {course} training badge",
     ],
     "spam": [
         "You could win a {prize} today",
@@ -41,7 +41,7 @@ EMAIL_BODIES = {
         "Your order from {service} is confirmed. The receipt is available in your account dashboard.",
         "Please review the latest {project} notes before our next scheduled discussion.",
         "The {event} schedule has changed. Contact the organizer through your usual company directory.",
-        "This is the weekly status update for {team}. No action is required unless you have questions.",
+        "Congratulations, you completed the {course} training and earned a badge. View it from your learning account. No payment or password is requested.",
     ],
     "spam": [
         "Congratulations, you may claim a {prize}. Limited time offer; visit our promotions page to learn more.",
@@ -91,6 +91,7 @@ TOKENS = {
     "product": ["headphones", "office supplies", "running shoes", "kitchen tools", "books"],
     "percent": ["10", "15", "20", "25", "30"],
     "account": ["mailbox", "payment account", "online profile", "work account", "subscription"],
+    "course": ["cloud security", "first aid", "data analysis", "project management", "networking"],
 }
 
 

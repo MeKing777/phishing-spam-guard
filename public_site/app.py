@@ -60,7 +60,7 @@ st.warning(
 )
 
 st.caption(
-    "Checks are rule-based and run on this app's server. Links are not opened or checked against a live reputation service."
+    "Checks are rule-based and run on this app's server. A congratulatory course or badge message is not marked as spam by those words alone. Links are not opened or checked against a live reputation service."
 )
 st.checkbox(
     "I understand that text or links I submit are sent to this website's server for analysis.",
@@ -193,6 +193,7 @@ with st.expander("How this checker works and its limits"):
     st.markdown(
         """
         - Looks for common urgency, credential, payment, sender-alignment, and URL-structure signals.
+        - Treats prize claims and payment requests as stronger evidence than words such as “Congratulations” or “Unsubscribe” by themselves.
         - Does not open links, download attachments, query threat-intelligence services, or verify identities.
         - A low-risk result does not prove a message or website is safe. Treat this as a first-pass aid.
         - No Gmail inbox is connected, and no email is sent, moved, or deleted.
