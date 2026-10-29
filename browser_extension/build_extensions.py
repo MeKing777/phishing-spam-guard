@@ -17,7 +17,10 @@ ARCHIVES = {
     "chromium": ROOT / "build" / "Alerter-Chromium",
     "firefox": ROOT / "build" / "Alerter-Firefox",
 }
-SHARED_FILES = ("background.js", "content.js", "popup.html", "popup.js", "setup.html")
+SHARED_FILES = (
+    "background.js", "content.js", "popup.html", "popup.js", "setup.html",
+    "popup-guard.js", "threat-intel.js",
+)
 
 
 def write_icons() -> None:

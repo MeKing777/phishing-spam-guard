@@ -3,8 +3,9 @@
 This folder is generated locally by `python -m tools.build_threat_dataset`.
 It contains separate `train.jsonl` and `test.jsonl` files with synthetic
 examples labelled `benign`, `spam`, `phishing`, or `harmful_url`. The benign
-email holdout includes a congratulatory course-badge message so that this
-ordinary message type is represented separately from prize and giveaway spam.
+email holdout includes a labeled AWS course-badge message from Credly, with a
+sender display name, so this ordinary message type is distinct from prize and
+giveaway spam.
 All records
 are marked `source: synthetic` and `is_synthetic: true`; `.test` and `.invalid`
 domains are reserved examples, not live threat indicators.

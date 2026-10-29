@@ -22,7 +22,7 @@
       <div class="mark"><img src="icons/alerter-48.png" alt="Alerter logo"></div>
       <p class="eyebrow">Local browser protection</p>
       <h1>Set up Alerter</h1>
-      <p class="intro">Alerter automatically checks website addresses and page links, warns about risky destinations, and can block common ad and tracker requests. It scans visible Gmail inbox previews as you scroll and open messages in Gmail or Outlook. You can also ask it to read and check text in the currently visible tab. Its Python checker and optional screen OCR run on this computer.</p>
+      <p class="intro">Alerter checks website addresses and page links, warns about phishing-list matches, suspicious redirects, and risky downloads, and blocks known ad requests and pop-ups. It hides common banner slots while the ad switch is on. It also scans visible Gmail and Outlook messages. Its Python checker and optional screen OCR run on this computer.</p>
 
       <h2 class="section-title">1. Start the local checker</h2>
       <ol class="steps">
@@ -38,8 +38,8 @@
         <div class="path"><b>Firefox desktop</b><code id="firefox-path"></code></div>
       </div>
 
-      <div class="privacy"><b>Permission note:</b> Background link and email checks require permission to read pages you visit, including visible webmail content. A screen image is captured only after you click its scan button; the image is read by local OCR, used for the check, and discarded. Alerter does not upload scan content to a cloud service or delete email.</div>
-      <p class="bottom">The extension package targets desktop Chrome, Edge, Brave, Opera, and Firefox. Browser extensions are not supported in the same way on every mobile browser; Safari requires a separate signed package. Link and email checks are indicators, not a guarantee that a low-risk result is safe.</p>
+      <div class="privacy"><b>Permission note:</b> Background link and email checks require permission to read pages you visit, including visible webmail content. Alerter downloads a public phishing-domain list from GitHub about twice daily; it does not send your visited URLs or page content with that request. Scan content stays on your device. A screen image is captured only after you click its scan button, read locally, and discarded.</div>
+      <p class="bottom">The extension targets desktop Chrome, Edge, Brave, Opera, and Firefox. It checks URLs and warns about risky downloads but does not scan downloaded files for viruses. Keep your browser's built-in protection on. Link and email checks are indicators, not a guarantee that a low-risk result is safe.</p>
     </main>
     <script>
       let path=decodeURIComponent(location.pathname).replace(/^\/(\w:)/,'$1').replace(/\//g,'\\').replace(/\\setup\.html$/i,'');

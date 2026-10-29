@@ -60,7 +60,7 @@ st.warning(
 )
 
 st.caption(
-    "Checks are rule-based and run on this app's server. A congratulatory course or badge message is not marked as spam by those words alone. Links are not opened or checked against a live reputation service."
+    "Checks run on this app's server. Course-badge notices are assessed with sender context; generic congratulations or reward words alone are not treated as spam. Web addresses are compared with a cached public phishing-domain list, but links are never opened. The list provider receives no submitted address or message text."
 )
 st.checkbox(
     "I understand that text or links I submit are sent to this website's server for analysis.",
@@ -125,6 +125,7 @@ if scan_type == "Email text":
     with st.form("email_scan", clear_on_submit=True):
         subject = st.text_input("Subject (optional)", max_chars=500)
         sender = st.text_input("Sender address (optional)", max_chars=320)
+        sender_name = st.text_input("Sender display name (optional)", max_chars=160)
         reply_to = st.text_input("Reply-to address (optional)", max_chars=320)
         body = st.text_area(
             "Message text",
@@ -145,7 +146,13 @@ if scan_type == "Email text":
             st.warning("Enter a subject or message text first.")
         else:
             try:
-                result = analyze_email(subject=subject, sender=sender, reply_to=reply_to, body=body)
+                result = analyze_email(
+                    subject=subject,
+                    sender=sender,
+                    sender_name=sender_name,
+                    reply_to=reply_to,
+                    body=body,
+                )
                 st.session_state.email_result = compact_email_result(result)
             except Exception:
                 st.error("The message could not be analyzed. Check the length and try again.")
@@ -194,7 +201,7 @@ with st.expander("How this checker works and its limits"):
         """
         - Looks for common urgency, credential, payment, sender-alignment, and URL-structure signals.
         - Treats prize claims and payment requests as stronger evidence than words such as “Congratulations” or “Unsubscribe” by themselves.
-        - Does not open links, download attachments, query threat-intelligence services, or verify identities.
+        - Does not open links, download attachments, or verify identities. Address checks compare hostnames locally against a cached public phishing-domain list; that provider does not receive the submitted address.
         - A low-risk result does not prove a message or website is safe. Treat this as a first-pass aid.
         - No Gmail inbox is connected, and no email is sent, moved, or deleted.
         """

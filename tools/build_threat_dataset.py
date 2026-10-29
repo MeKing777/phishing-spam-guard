@@ -9,7 +9,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "data" / "threat_intelligence"
-DATASET_VERSION = "synthetic-v2"
+DATASET_VERSION = "synthetic-v3"
 
 EMAIL_SUBJECTS = {
     "benign": [
@@ -18,6 +18,7 @@ EMAIL_SUBJECTS = {
         "Updated schedule for {event}",
         "Document ready for your review",
         "Congratulations on earning your {course} training badge",
+        "You just earned an AWS Educate course badge",
     ],
     "spam": [
         "You could win a {prize} today",
@@ -42,6 +43,7 @@ EMAIL_BODIES = {
         "Please review the latest {project} notes before our next scheduled discussion.",
         "The {event} schedule has changed. Contact the organizer through your usual company directory.",
         "Congratulations, you completed the {course} training and earned a badge. View it from your learning account. No payment or password is requested.",
+        "You just earned a badge from Amazon Web Services Training and Certification. AWS Educate Getting Started with Security - Training Badge. Issuer: Amazon Web Services Training and Certification.",
     ],
     "spam": [
         "Congratulations, you may claim a {prize}. Limited time offer; visit our promotions page to learn more.",
@@ -116,11 +118,13 @@ def _email_samples(label: str) -> list[dict[str, Any]]:
                 "spam": "promotions.invalid",
                 "phishing": "mailbox-security.invalid",
             }
+            is_aws_badge = label == "benign" and index == len(EMAIL_SUBJECTS[label]) - 1
             samples.append({
                 "kind": "email",
                 "label": label,
                 "subject": _format(subject_template, sample_index),
-                "sender": f"sender{variation}@{sender_domains[label]}",
+                "sender": "admin@credly.com" if is_aws_badge else f"sender{variation}@{sender_domains[label]}",
+                "sender_name": "Amazon Web Services Training and Certification via Credly" if is_aws_badge else "",
                 "body": _format(body_template, sample_index),
                 "url": None,
                 "source": "synthetic",

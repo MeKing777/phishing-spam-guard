@@ -1,28 +1,65 @@
 {
   "manifest_version": 3,
   "name": "Alerter — Phishing & Spam Protection",
-  "version": "2.0.4",
-  "description": "Automatically checks websites and email, warns on risky destinations, and blocks common ad requests on your device.",
-  "permissions": ["activeTab", "notifications", "declarativeNetRequest"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "version": "2.1.1",
+  "description": "Checks phishing risks, blocks common ad and pop-up requests, hides recognizable ad slots, and warns about risky sites.",
+  "permissions": [
+    "activeTab",
+    "notifications",
+    "declarativeNetRequest",
+    "alarms",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*",
+    "https://raw.githubusercontent.com/Phishing-Database/Phishing.Database/*"
+  ],
   "background": {
-    "scripts": ["analyzer.js", "background.js"]
+    "scripts": [
+      "analyzer.js",
+      "background.js"
+    ]
   },
   "declarative_net_request": {
     "rule_resources": [
-      { "id": "basic_ads", "enabled": true, "path": "rules/ads.json" }
+      {
+        "id": "basic_ads",
+        "enabled": true,
+        "path": "rules/ads.json"
+      }
     ]
   },
   "browser_specific_settings": {
     "gecko": {
       "id": "alerter-security@example.org",
-      "data_collection_permissions": { "required": ["none"] }
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["content.js"],
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "popup-guard.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],

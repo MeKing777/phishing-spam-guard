@@ -20,11 +20,11 @@ self.AlerterAnalyzer = (() => {
     microsoft: ["microsoft.com", "microsoftonline.com", "office.com", "outlook.com", "live.com"],
     netflix: ["netflix.com"], paypal: ["paypal.com", "paypalobjects.com"], yahoo: ["yahoo.com"],
   };
-  // Narrow exception for AWS training notices sent by its certification platform.
-  const delegatedSenderDomains = { amazon: new Set(["credly.com"]) };
   const freeEmailDomains = new Set(["aol.com", "gmail.com", "googlemail.com", "hotmail.com", "icloud.com", "live.com", "outlook.com", "yahoo.com"]);
   const riskyExtensions = new Set(["ade", "adp", "app", "bat", "cab", "cmd", "com", "cpl", "exe", "hta", "img", "iso", "jar", "js", "jse", "lnk", "msi", "ps1", "scr", "vbe", "vbs", "wsf", "wsh"]);
   const reviewExtensions = new Set(["docm", "dotm", "html", "htm", "iso", "pptm", "xlam", "xlsm", "xltm"]);
+  const riskyDownloadExtensions = new Set([".apk", ".app", ".bat", ".cmd", ".com", ".dmg", ".exe", ".hta", ".jar", ".js", ".lnk", ".msi", ".pkg", ".ps1", ".scr", ".vbs"]);
+  const reviewDownloadExtensions = new Set([".docm", ".img", ".iso", ".pptm", ".xlam", ".xlsm"]);
 
   function domainAligns(first, second) {
     return Boolean(first && second) && (first === second || first.endsWith(`.${second}`) || second.endsWith(`.${first}`));
@@ -36,6 +36,23 @@ self.AlerterAnalyzer = (() => {
     const candidate = (bracketed?.[1] || value).trim();
     const at = candidate.lastIndexOf("@");
     return at >= 0 ? candidate.slice(at + 1).trim().replace(/^[ >.]+|[ >.]+$/g, "").toLowerCase() : "";
+  }
+
+  function isAwsCredlyBadgeNotice(senderDomain, senderName, subject, body) {
+    const domain = String(senderDomain || "").toLowerCase().replace(/\.$/, "");
+    if (domain !== "credly.com" && !domain.endsWith(".credly.com")) return false;
+    const display = String(senderName || "");
+    const content = `${subject || ""} ${body || ""}`;
+    return /\bamazon\b/i.test(display)
+      && /\b(?:amazon web services|aws)\b/i.test(content)
+      && /\b(?:training|certification|educate|course)\b/i.test(`${display} ${content}`)
+      && /\b(?:earned|awarded|received|completed|issued)\b.{0,80}\b(?:badge|certificate|credential|certification)\b/i.test(content);
+  }
+
+  function isAwsBadgeRelatedHost(host) {
+    const candidate = String(host || "").toLowerCase().replace(/\.$/, "");
+    return ["credly.com", "amazon.com", "amazonaws.com"].some((domain) =>
+      candidate === domain || candidate.endsWith(`.${domain}`));
   }
 
   function parseUrl(value) {
@@ -77,6 +94,11 @@ self.AlerterAnalyzer = (() => {
     const url = String(value || "");
     const signals = [];
     let score = 0;
+    const schemeMatch = url.trim().match(/^([a-z][a-z0-9+.-]*):/i);
+    if (schemeMatch && ["javascript", "data", "vbscript"].includes(schemeMatch[1].toLowerCase())) {
+      const scheme = schemeMatch[1].toLowerCase();
+      return { url, host: "Unknown", risk_score: 75, risk_level: "High", signals: [`Link uses the unsafe ${scheme}: scheme instead of a normal web address`] };
+    }
     let parsed;
     try { parsed = parseUrl(url); } catch { parsed = null; }
     const host = (parsed?.hostname || "").toLowerCase().replace(/\.$/, "");
@@ -103,6 +125,16 @@ self.AlerterAnalyzer = (() => {
     if (parsed.protocol.toLowerCase() !== "https:") { score += 8; signals.push("Does not use HTTPS"); }
     if (/(?:login|verify|account|secure|password|wallet|payment|signin)/i.test(host + parsed.pathname)) {
       score += 7; signals.push("Contains account or payment wording in the domain or path");
+    }
+    let decodedPath = parsed.pathname.toLowerCase();
+    try { decodedPath = decodeURIComponent(parsed.pathname).toLowerCase(); } catch {}
+    const suffix = decodedPath.match(/(\.[a-z0-9]{1,10})$/)?.[1] || "";
+    if (riskyDownloadExtensions.has(suffix)) {
+      score = Math.max(score, 65);
+      signals.push(`Direct link to a potentially executable download (${suffix}); this check does not scan the file`);
+    } else if (reviewDownloadExtensions.has(suffix)) {
+      score = Math.max(score, 35);
+      signals.push(`Direct link to a file that may contain active content (${suffix})`);
     }
     if (depth < 2) {
       for (const [key, target] of parsed.searchParams) {
@@ -152,19 +184,28 @@ self.AlerterAnalyzer = (() => {
     const signals = [];
     const kinds = new Set();
     let score = 0;
-    for (const [pattern, points, label] of phishingPatterns) if (pattern.test(content)) { score += points; signals.push(label); kinds.add("Phishing"); }
-    for (const [pattern, points, label] of spamPatterns) if (pattern.test(content)) { score += points; signals.push(label); kinds.add("Spam"); }
-
     const senderDomain = emailDomain(sender);
     const replyDomain = emailDomain(replyTo);
     const returnPathDomain = emailDomain(returnPath);
+    const awsCredlyBadge = isAwsCredlyBadgeNotice(senderDomain, senderName, subject, body);
+    if (awsCredlyBadge) signals.push("AWS course-badge wording from a Credly address matched; generic reward wording is downweighted, but the sender and links are not verified");
+    for (const [pattern, points, label] of phishingPatterns) {
+      if (awsCredlyBadge && label === "Requests or discusses a sensitive payment action") continue;
+      if (pattern.test(content)) { score += points; signals.push(label); kinds.add("Phishing"); }
+    }
+    for (const [pattern, points, label] of spamPatterns) {
+      if (awsCredlyBadge) continue;
+      if (pattern.test(content)) { score += points; signals.push(label); kinds.add("Spam"); }
+    }
+
     if (senderDomain && replyDomain && !domainAligns(senderDomain, replyDomain)) { score += 25; signals.push("Reply-to address uses a different domain from the sender"); kinds.add("Phishing"); }
     if (senderDomain && returnPathDomain && !domainAligns(senderDomain, returnPathDomain)) { score += 16; signals.push("Return-Path domain does not align with the sender domain"); kinds.add("Phishing"); }
     for (const [method, points, signal] of authHeaderFindings(authenticationResults)) { score += points; signals.push(signal); kinds.add("Phishing"); }
 
     for (const [brand, officialDomains] of Object.entries(brands)) {
+      if (awsCredlyBadge && brand === "amazon") continue;
       if (new RegExp(`\\b${brand}\\b`, "i").test(senderName) && (
-        freeEmailDomains.has(senderDomain) || ![...officialDomains, ...(delegatedSenderDomains[brand] || [])].some((domain) => senderDomain === domain || senderDomain.endsWith(`.${domain}`))
+        freeEmailDomains.has(senderDomain) || !officialDomains.some((domain) => senderDomain === domain || senderDomain.endsWith(`.${domain}`))
       )) {
         score += 30;
         signals.push(`Sender display name claims ${brand[0].toUpperCase()}${brand.slice(1)}, but its email domain is different`);
@@ -179,7 +220,7 @@ self.AlerterAnalyzer = (() => {
       const scheme = href.includes(":") ? href.split(":", 1)[0].toLowerCase() : "";
       if (["javascript", "data", "vbscript"].includes(scheme)) { score += 35; signals.push(`Contains an embedded link using the ${scheme}: scheme`); kinds.add("Phishing"); continue; }
       const visibleHost = looksLikeDomain(visibleText);
-      const destinationHost = href ? analyzeUrl(href).host : "";
+      const destinationHost = /^https?:\/\//i.test(href) ? analyzeUrl(href).host : "";
       if (visibleHost && !["", "Unknown"].includes(destinationHost) && !domainAligns(visibleHost, destinationHost)) {
         score += 30;
         signals.push(`Visible link text names ${visibleHost}, but the link points to ${destinationHost}`);
@@ -195,6 +236,14 @@ self.AlerterAnalyzer = (() => {
     }
 
     const urls = extractUrls(content).slice(0, 20).map(analyzeUrl);
+    if (awsCredlyBadge && [...urls, ...linkPairs.map((link) => {
+      const href = String(link?.href || "").trim();
+      return /^https?:\/\//i.test(href) ? analyzeUrl(href) : null;
+    }).filter(Boolean)].some((item) => item.host !== "Unknown" && item.host && !isAwsBadgeRelatedHost(item.host))) {
+      score += 25;
+      signals.push("Badge notice contains a link outside Credly or Amazon domains");
+      kinds.add("Phishing");
+    }
     if (urls.length) {
       const highestUrlRisk = Math.max(...urls.map((item) => item.risk_score));
       if (highestUrlRisk >= 25) {

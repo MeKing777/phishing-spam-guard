@@ -431,7 +431,7 @@ elif current_page == "Email scanner":
             explain_locally(subject, sender, email_text, ollama_model, "ollama_pasted")
 
 elif current_page == "Link scanner":
-    page_header("Link scanner", "Inspect a suspicious web address without opening it or sending it to a reputation service.")
+    page_header("Link scanner", "Inspect a web address without opening it. Its hostname is compared locally with a cached community phishing list; the list provider does not receive the address.")
     with st.container(border=True):
         url = st.text_input("Web address", key="link_input", placeholder="https://example.com/login")
         if st.button("Analyze link", type="primary", key="analyze_link"):

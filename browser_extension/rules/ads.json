@@ -4,71 +4,49 @@
     "priority": 1,
     "action": { "type": "block" },
     "condition": {
-      "requestDomains": ["doubleclick.net"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
+      "requestDomains": [
+        "3lift.com", "adform.net", "adition.com", "adkernel.com", "admanmedia.com",
+        "admixer.net", "adnexus.net", "adnxs.com", "adnuntius.com", "adroll.com",
+        "adsafeprotected.com", "adskeeper.co.uk", "ad-stir.com", "adtech.de",
+        "adzerk.net", "amgdgt.com", "appnexus.com", "audience.network", "audrte.com",
+        "axonix.com", "betweendigital.com", "bidtheatre.com", "bidswitch.net",
+        "bidvertiser.com", "bluekai.com", "casalemedia.com", "c1exchange.com",
+        "connatix.com", "contextweb.com", "criteo.com", "criteo.net", "crosspixel.net",
+        "demdex.net", "districtm.io", "doubleclick.net", "doubleverify.com",
+        "e-planning.net", "emxdgt.com", "exelator.com", "exoclick.com", "eyeota.net",
+        "flashtalking.com", "freewheel.tv", "gumgum.com", "hybrid.ai", "imrworldwide.com",
+        "indexexchange.com", "indexww.com", "innovid.com", "integralads.com", "ipredictive.com",
+        "ispot.tv", "jivox.com", "kargo.com", "lemmatechnologies.com", "lijit.com",
+        "liveintent.com", "loopme.com", "mathtag.com", "media.net", "mediamath.com",
+        "mediaiqdigital.com", "moatads.com", "mookie1.com", "nativo.com", "nexage.com",
+        "omnitagjs.com", "openx.net", "outbrain.com", "pixel.ad", "popads.net",
+        "popcash.net", "propellerads.com", "pubmatic.com", "quantserve.com", "quantcast.com",
+        "revcontent.com", "rlcdn.com", "rokad.com", "rubiconproject.com", "scorecardresearch.com",
+        "sharethrough.com", "simpli.fi", "smaato.net", "smartadserver.com", "smartclip.net",
+        "spotx.tv", "spotxchange.com", "taboola.com", "teads.tv", "trafficjunky.net",
+        "triplelift.com", "undertone.com", "yieldmo.com", "zedo.com", "zemanta.com",
+        "googleadservices.com", "googlesyndication.com", "googletagservices.com",
+        "amazon-adsystem.com", "adsrvr.org", "advertising.com"
+      ],
+      "resourceTypes": [
+        "script", "image", "sub_frame", "stylesheet", "xmlhttprequest", "media", "ping"
+      ]
     }
   },
   {
     "id": 2,
-    "priority": 1,
+    "priority": 2,
     "action": { "type": "block" },
     "condition": {
-      "requestDomains": ["googlesyndication.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
-    }
-  },
-  {
-    "id": 3,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "requestDomains": ["googleadservices.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
-    }
-  },
-  {
-    "id": 4,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "requestDomains": ["adnxs.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
-    }
-  },
-  {
-    "id": 5,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "requestDomains": ["adsrvr.org"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
-    }
-  },
-  {
-    "id": 6,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "requestDomains": ["taboola.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
-    }
-  },
-  {
-    "id": 7,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "requestDomains": ["outbrain.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
-    }
-  },
-  {
-    "id": 8,
-    "priority": 1,
-    "action": { "type": "block" },
-    "condition": {
-      "requestDomains": ["criteo.com"],
-      "resourceTypes": ["script", "image", "sub_frame", "xmlhttprequest", "media"]
+      "requestDomains": [
+        "doubleclick.net", "googleadservices.com", "googlesyndication.com", "adnxs.com",
+        "adsrvr.org", "taboola.com", "outbrain.com", "criteo.com", "adform.net",
+        "adroll.com", "revcontent.com", "zedo.com", "popads.net", "popcash.net",
+        "propellerads.com", "adcash.com", "trafficjunky.net", "exoclick.com",
+        "hilltopads.net", "adsterra.com", "3lift.com", "pubmatic.com", "smartadserver.com",
+        "bidvertiser.com", "advertising.com"
+      ],
+      "resourceTypes": ["main_frame"]
     }
   }
 ]

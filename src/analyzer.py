@@ -6,9 +6,10 @@ import ipaddress
 import re
 from email.utils import parseaddr
 from html import unescape
-from urllib.parse import parse_qsl, urlsplit
+from urllib.parse import parse_qsl, unquote, urlsplit
 
 from src.trained_detector import assess as assess_trained_model
+from src.threat_intel import lookup_host
 
 
 URL_PATTERN = re.compile(r"(?i)\b(?:https?://|www\.)[^\s<>\"']+")
@@ -50,13 +51,6 @@ BRAND_DOMAINS = {
     "yahoo": ("yahoo.com",),
 }
 
-# Some organizations send legitimate training and certification notices through
-# a known delivery partner. Keep this narrow: it only prevents a sender-name
-# mismatch warning for Amazon training messages delivered by Credly.
-DELEGATED_SENDER_DOMAINS = {
-    "amazon": {"credly.com"},
-}
-
 FREE_EMAIL_DOMAINS = {
     "aol.com", "gmail.com", "googlemail.com", "hotmail.com", "icloud.com", "live.com",
     "outlook.com", "yahoo.com",
@@ -70,6 +64,11 @@ RISKY_ATTACHMENT_EXTENSIONS = {
 REVIEW_ATTACHMENT_EXTENSIONS = {
     ".docm", ".dotm", ".html", ".htm", ".iso", ".pptm", ".xlam", ".xlsm", ".xltm",
 }
+RISKY_DOWNLOAD_EXTENSIONS = {
+    ".apk", ".app", ".bat", ".cmd", ".com", ".dmg", ".exe", ".hta", ".jar",
+    ".js", ".lnk", ".msi", ".pkg", ".ps1", ".scr", ".vbs",
+}
+REVIEW_DOWNLOAD_EXTENSIONS = {".docm", ".iso", ".img", ".pptm", ".xlsm", ".xlam"}
 
 
 def _email_domain(address: str) -> str:
@@ -129,6 +128,35 @@ def _auth_header_findings(authentication_results: str) -> list[tuple[str, int, s
     return findings
 
 
+def _is_aws_credly_badge_notice(
+    sender_domain: str, sender_name: str, subject: str, body: str
+) -> bool:
+    """Recognize a narrow, common legitimate AWS badge-delivery pattern."""
+    domain = (sender_domain or "").lower().rstrip(".")
+    if domain != "credly.com" and not domain.endswith(".credly.com"):
+        return False
+    display = unescape(sender_name or "")
+    content = unescape(f"{subject or ''} {body or ''}")
+    return bool(
+        re.search(r"\bamazon\b", display, re.I)
+        and re.search(r"\b(?:amazon web services|aws)\b", content, re.I)
+        and re.search(r"\b(?:training|certification|educate|course)\b", f"{display} {content}", re.I)
+        and re.search(
+            r"\b(?:earned|awarded|received|completed|issued)\b.{0,80}\b(?:badge|certificate|credential|certification)\b",
+            content,
+            re.I,
+        )
+    )
+
+
+def _is_aws_badge_related_host(host: str) -> bool:
+    candidate = (host or "").lower().rstrip(".")
+    return any(
+        candidate == domain or candidate.endswith("." + domain)
+        for domain in ("credly.com", "amazon.com", "amazonaws.com")
+    )
+
+
 def extract_urls(text: str) -> list[str]:
     """Return URLs found in text without following or fetching them."""
     urls: list[str] = []
@@ -149,13 +177,27 @@ def _parse_url(url: str):
 
 
 def analyze_url(url: str, _depth: int = 0) -> dict:
-    """Score visible URL traits. This does not visit the URL or verify its reputation."""
+    """Score visible URL traits without visiting it or inspecting downloaded files."""
     signals: list[str] = []
     score = 0
+    raw_url = str(url or "").strip()
+    scheme_match = re.match(r"^([a-z][a-z0-9+.-]*):", raw_url, re.I)
+    if scheme_match and scheme_match.group(1).lower() in {"javascript", "data", "vbscript"}:
+        scheme = scheme_match.group(1).lower()
+        return {
+            "url": raw_url,
+            "host": "Unknown",
+            "risk_score": 75,
+            "risk_level": "High",
+            "signals": [f"Link uses the unsafe {scheme}: scheme instead of a normal web address"],
+        }
     try:
         parsed = _parse_url(url)
-        host = (parsed.hostname or "").lower().rstrip(".")
+        raw_host = (parsed.hostname or "").lower().rstrip(".")
+        host = raw_host.encode("idna").decode("ascii").lower()
     except ValueError:
+        parsed, host = None, ""
+    except UnicodeError:
         parsed, host = None, ""
 
     if not host:
@@ -213,6 +255,19 @@ def analyze_url(url: str, _depth: int = 0) -> dict:
         score += 7
         signals.append("Contains account or payment wording in the domain or path")
 
+    if parsed:
+        path = unquote(parsed.path).lower()
+        suffix_match = re.search(r"(\.[a-z0-9]{1,10})$", path)
+        suffix = suffix_match.group(1) if suffix_match else ""
+        if suffix in RISKY_DOWNLOAD_EXTENSIONS:
+            score = max(score, 65)
+            signals.append(
+                f"Direct link to a potentially executable download ({suffix}); this check does not scan the file"
+            )
+        elif suffix in REVIEW_DOWNLOAD_EXTENSIONS:
+            score = max(score, 35)
+            signals.append(f"Direct link to a file that may contain active content ({suffix})")
+
     if parsed and _depth < 2:
         for key, target in parse_qsl(parsed.query, keep_blank_values=False):
             normalized_key = key.lower().replace("_", "").replace("-", "")
@@ -233,11 +288,18 @@ def analyze_url(url: str, _depth: int = 0) -> dict:
             "The locally trained URL model flags this address as phishing "
             f"({trained_model['confidence']:.0%} model score)"
         )
+    threat_intel = lookup_host(host)
+    if threat_intel:
+        score = max(score, 85)
+        signals.insert(0, f"Domain appears on the active phishing list maintained by {threat_intel['source']}")
     score = min(score, 100)
     level = "High" if score >= 55 else "Review" if score >= 25 else "Low"
     if not signals:
         signals.append("No obvious URL warning signs found by the local checks")
-    return {"url": url, "host": host, "risk_score": score, "risk_level": level, "signals": signals}
+    result = {"url": url, "host": host, "risk_score": score, "risk_level": level, "signals": signals}
+    if threat_intel:
+        result["threat_intel"] = threat_intel
+    return result
 
 
 def _risk_level(score: int) -> str:
@@ -265,21 +327,32 @@ def analyze_email(
     score = 0
     kinds: set[str] = set()
 
+    sender_domain = _email_domain(sender)
+    reply_domain = _email_domain(reply_to)
+    return_path_domain = _email_domain(return_path)
+    aws_credly_badge = _is_aws_credly_badge_notice(
+        sender_domain, sender_name, subject, body
+    )
+    if aws_credly_badge:
+        signals.append(
+            "AWS course-badge wording from a Credly address matched; generic reward wording is downweighted, but the sender and links are not verified"
+        )
+
     for pattern, points, label in PHISHING_PATTERNS:
+        if aws_credly_badge and label == "Requests or discusses a sensitive payment action":
+            continue
         if pattern.search(content):
             score += points
             signals.append(label)
             kinds.add("Phishing")
 
     for pattern, points, label in SPAM_PATTERNS:
+        if aws_credly_badge:
+            continue
         if pattern.search(content):
             score += points
             signals.append(label)
             kinds.add("Spam")
-
-    sender_domain = _email_domain(sender)
-    reply_domain = _email_domain(reply_to)
-    return_path_domain = _email_domain(return_path)
     if sender_domain and reply_domain and not _domains_align(sender_domain, reply_domain):
         score += 25
         signals.append("Reply-to address uses a different domain from the sender")
@@ -297,11 +370,13 @@ def analyze_email(
 
     display_name = unescape(sender_name or "")
     for brand, official_domains in BRAND_DOMAINS.items():
+        if aws_credly_badge and brand == "amazon":
+            continue
         if re.search(rf"\b{re.escape(brand)}\b", display_name, re.I) and (
             sender_domain in FREE_EMAIL_DOMAINS
             or not any(
                 sender_domain == domain or sender_domain.endswith("." + domain)
-                for domain in (*official_domains, *DELEGATED_SENDER_DOMAINS.get(brand, set()))
+                for domain in official_domains
             )
         ):
             score += 30
@@ -311,17 +386,22 @@ def analyze_email(
             kinds.add("Phishing")
             break
 
-    for link in link_pairs:
+    link_url_checks: list[dict] = []
+    for link in link_pairs[:60]:
         href = str(link.get("href", "")).strip()
         visible_text = str(link.get("text", "")).strip()
         scheme = href.split(":", 1)[0].lower() if ":" in href else ""
         if scheme in {"javascript", "data", "vbscript"}:
+            link_url_checks.append(analyze_url(href))
             score += 35
             signals.append(f"Contains an embedded link using the {scheme}: scheme")
             kinds.add("Phishing")
             continue
         visible_host = _looks_like_domain(visible_text)
-        destination_host = analyze_url(href)["host"] if href else ""
+        destination = analyze_url(href) if re.match(r"(?i)^https?://", href) else None
+        if destination:
+            link_url_checks.append(destination)
+        destination_host = destination["host"] if destination else ""
         if visible_host and destination_host not in {"", "Unknown"} and not _domains_align(
             visible_host, destination_host
         ):
@@ -345,16 +425,38 @@ def analyze_email(
             kinds.add("Phishing")
 
     urls = extract_urls(content)
-    url_checks = [analyze_url(url) for url in urls[:20]]
+    candidates = [*link_url_checks, *(analyze_url(url) for url in urls[:20])]
+    url_checks = []
+    seen_url_checks: set[str] = set()
+    for item in candidates:
+        if item["url"] not in seen_url_checks:
+            seen_url_checks.add(item["url"])
+            url_checks.append(item)
+    if aws_credly_badge and any(
+        item["host"] not in {"", "Unknown"} and not _is_aws_badge_related_host(item["host"])
+        for item in url_checks
+    ):
+        score += 25
+        signals.append("Badge notice contains a link outside Credly or Amazon domains")
+        kinds.add("Phishing")
     if url_checks:
         highest_url_risk = max(item["risk_score"] for item in url_checks)
         if highest_url_risk >= 25:
             score += min(35, round(highest_url_risk * 0.45))
             signals.append(f"Contains a link with URL warning signs (highest URL score: {highest_url_risk}/100)")
             kinds.add("Phishing")
+        if any(item.get("threat_intel") for item in url_checks):
+            score = max(score, 85)
+            signals.insert(0, "A linked domain appears in the active community phishing list")
+            kinds.add("Phishing")
 
     trained_model = assess_trained_model(content, "email")
-    if trained_model and trained_model["flagged"] and trained_model["label"] in {"phishing", "spam"}:
+    if (
+        trained_model
+        and trained_model["flagged"]
+        and trained_model["label"] in {"phishing", "spam"}
+        and not (aws_credly_badge and trained_model["label"] == "spam")
+    ):
         score = max(score, 30)
         signals.append(
             f"The locally trained email model flags this as {trained_model['label']} "

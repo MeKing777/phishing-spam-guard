@@ -19,6 +19,38 @@
   const inboxResults = new Map();
   const inboxPreviewRows = new Map();
   const notifiedInboxEmails = new Set();
+  let adProtectionEnabled = false;
+  const adCosmeticStyleText = `
+    [data-ad-slot],[data-adunit],[data-ad-container],[data-advertisement],
+    [data-google-query-id],ins.adsbygoogle,.adsbygoogle,.ad-slot,.ad-banner,
+    .advertisement-banner,.sponsored-ad,[id^="google_ads_iframe"],
+    [id^="div-gpt-ad"],[aria-label="Advertisement" i],[aria-label="Sponsored" i],
+    iframe[src*="doubleclick.net" i],iframe[src*="googlesyndication.com" i],
+    iframe[src*="adnxs.com" i],iframe[src*="taboola.com" i],
+    iframe[src*="outbrain.com" i],iframe[src*="criteo.com" i]{
+      display:none!important;visibility:hidden!important;pointer-events:none!important
+    }
+  `;
+
+  function setAdProtection(enabled) {
+    adProtectionEnabled = enabled === true;
+    const existing = document.getElementById("__alerterAdCosmetics");
+    if (adProtectionEnabled && !existing) {
+      const style = document.createElement("style");
+      style.id = "__alerterAdCosmetics";
+      style.textContent = adCosmeticStyleText;
+      (document.head || document.documentElement)?.append(style);
+    } else if (!adProtectionEnabled) {
+      existing?.remove();
+    }
+    window.dispatchEvent(new CustomEvent("alerter:set-ad-protection", { detail: adProtectionEnabled }));
+  }
+
+  function loadAdProtectionState() {
+    chrome.runtime.sendMessage({ type: "ad-blocker-status" })
+      .then((response) => { if (response?.ok) setAdProtection(response.enabled); })
+      .catch(() => setAdProtection(false));
+  }
 
   function makeBadge(kind) {
     const host = document.createElement("div");
@@ -127,7 +159,9 @@
       const highRisk = result.risk_level === "High";
       showNotice(
         "link",
-        highRisk ? "This website has high-risk warning signs" : "Review this website",
+        result.threat_intel
+          ? "This domain appears on an active phishing list"
+          : highRisk ? "This website has high-risk warning signs" : "Review this website",
         `${result.host || location.hostname} · ${result.risk_score}/100`,
         result.signals || [],
         [],
@@ -211,15 +245,37 @@
   function highRiskClick(event) {
     const anchor = event.composedPath().find((node) => node instanceof HTMLAnchorElement);
     if (!anchor) return;
+    const rawHref = anchor.getAttribute("href") || "";
+    const unsafeScheme = rawHref.match(/^\s*(javascript|data|vbscript):/i)?.[1]?.toLowerCase();
+    if (unsafeScheme) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      showNotice(
+        "link",
+        "Blocked an unsafe embedded link",
+        "This link does not lead to a normal website address.",
+        [`The link uses the ${unsafeScheme}: scheme.`],
+        [],
+        "high",
+      );
+      return;
+    }
     const result = ratings.get(anchor.href);
     if (!result || !["High", "Review"].includes(result.risk_level)) return;
     event.preventDefault();
     event.stopImmediatePropagation();
     const highRisk = result.risk_level === "High";
-    const card = showNotice("link", highRisk ? "This link has danger signs" : "Review this indirect or suspicious link", `${result.host} · ${result.risk_score}/100`, result.signals || [], [
+    const card = showNotice(
+      "link",
+      result.threat_intel ? "This domain appears on an active phishing list" : highRisk ? "This link has danger signs" : "Review this indirect or suspicious link",
+      `${result.host} · ${result.risk_score}/100`,
+      result.signals || [],
+      [
       { label: "Stay here", run: () => removeBadge("link") },
       { label: "Open anyway", primary: true, run: () => { const href = anchor.href; const newTab = anchor.target === "_blank"; removeBadge("link"); if (newTab) window.open(href, "_blank", "noopener"); else location.assign(href); } },
-    ], highRisk ? "high" : "review");
+      ],
+      highRisk ? "high" : "review",
+    );
     card.setAttribute("role", "alertdialog");
   }
 
@@ -244,12 +300,22 @@
     const senderNodes = gmail ? [...document.querySelectorAll("span.gD[email]")] : [...document.querySelectorAll('[data-testid*="sender"]')];
     const senderNode = senderNodes.filter(visible).at(-1);
     const scope = node || document;
+    const messageScope = node?.closest(gmail ? ".adn" : "article,[role='document'],[data-testid*='message']") || node?.parentElement || node;
+    const attachmentNames = new Set();
+    const attachmentPattern = /[^\s"'<>/\\]+\.(?:ade|adp|app|bat|cab|cmd|com|cpl|docm|dotm|exe|hta|htm|html|img|iso|jar|js|jse|lnk|msi|pptm|ps1|scr|vbe|vbs|wsf|wsh|xlam|xlsm|xltm)\b/ig;
+    for (const element of messageScope?.querySelectorAll?.(".aV3,.aV2,[download],[data-testid*='attachment'],[aria-label*='attachment' i]") || []) {
+      if (!visible(element)) continue;
+      const label = [element.getAttribute("download"), element.getAttribute("aria-label"), element.getAttribute("title"), element.innerText]
+        .filter(Boolean).join(" ").slice(0, 500);
+      for (const match of label.matchAll(attachmentPattern)) attachmentNames.add(match[0]);
+    }
     return {
       supported: true, found: true,
       subject: (document.querySelector("h2.hP")?.innerText || document.querySelector('[role="heading"][aria-level="2"]')?.innerText || "").trim().slice(0, 250),
       sender: senderNode?.getAttribute("email") || senderNode?.getAttribute("title") || "",
       sender_name: (senderNode?.innerText || "").trim().slice(0, 120),
       body,
+      attachment_names: [...attachmentNames].slice(0, 20),
       link_pairs: [...(scope.querySelectorAll?.("a[href]") || [])].slice(0, 60).map((a) => ({ href: a.href, text: (a.innerText || a.getAttribute("aria-label") || "").trim().slice(0, 160) })),
     };
   }
@@ -474,6 +540,11 @@
   }
 
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type === "ad-protection-state") {
+      setAdProtection(message.enabled === true);
+      sendResponse({ ok: true });
+      return false;
+    }
     if (message?.type !== "scan-email-now") return false;
     const email = extractOpenEmail();
     if (email.found) {
@@ -485,6 +556,13 @@
   });
 
   document.addEventListener("click", highRiskClick, true);
+  window.addEventListener("alerter:ad-popup-blocked", (event) => {
+    if (!adProtectionEnabled || window.__alerterAdPopupNoticeAt > Date.now() - 3000) return;
+    window.__alerterAdPopupNoticeAt = Date.now();
+    const host = String(event.detail?.host || "an ad network").slice(0, 120);
+    showNotice("link", "Blocked a known ad pop-up", `Alerter stopped a new window aimed at ${host}.`, [], [], "review");
+  });
+  loadAdProtectionState();
   window.addEventListener("scroll", () => scheduleEmailScan(350), { capture: true, passive: true });
   queuePageLinks();
   schedulePageScan();

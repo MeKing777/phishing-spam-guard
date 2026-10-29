@@ -1,4 +1,44 @@
-if (typeof importScripts === "function") importScripts("analyzer.js");
+if (typeof importScripts === "function") importScripts("analyzer.js", "threat-intel.js");
+
+function broadcastAdProtection(enabled) {
+  try {
+    chrome.tabs.query({}, (tabs) => {
+      if (chrome.runtime.lastError) return;
+      for (const tab of tabs || []) {
+        if (tab.id === undefined) continue;
+        chrome.tabs.sendMessage(tab.id, { type: "ad-protection-state", enabled }, () => {
+          void chrome.runtime.lastError;
+        });
+      }
+    });
+  } catch {}
+}
+
+async function addThreatIntel(result) {
+  if (!result || typeof result !== "object" || !result.host || result.host === "Unknown") return result;
+  const finding = await self.AlerterThreatIntel.checkHost(result.host);
+  if (!finding) return result;
+  result.threat_intel = finding;
+  result.risk_score = Math.max(Number(result.risk_score) || 0, 85);
+  result.risk_level = "High";
+  result.signals = Array.isArray(result.signals) ? result.signals : [];
+  result.signals.unshift(`Domain appears in the active phishing list maintained by ${finding.source}`);
+  return result;
+}
+
+async function addEmailThreatIntel(result) {
+  result.urls = await Promise.all((result.urls || []).map(addThreatIntel));
+  if (result.urls.some((item) => item?.threat_intel)) {
+    result.risk_score = Math.max(Number(result.risk_score) || 0, 85);
+    result.risk_level = "High";
+    if (typeof result.category === "string" && !result.category.toLowerCase().includes("phishing")) {
+      result.category = result.category === "No obvious match" ? "Phishing" : `${result.category}, Phishing`;
+    }
+    result.signals = Array.isArray(result.signals) ? result.signals : [];
+    result.signals.unshift("A linked domain appears in the active community phishing list");
+  }
+  return result;
+}
 
 function notifyThreat(message, sendResponse) {
   const title = String(message.title || "Alerter security warning").slice(0, 80);
@@ -36,24 +76,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       enableRulesetIds: enabled ? ["basic_ads"] : [],
       disableRulesetIds: enabled ? [] : ["basic_ads"],
     })
-      .then(() => sendResponse({ ok: true, enabled }))
+      .then(() => {
+        broadcastAdProtection(enabled);
+        sendResponse({ ok: true, enabled });
+      })
       .catch((error) => sendResponse({ ok: false, error: error.message || "Could not update ad-blocking settings." }));
     return true;
   }
 
   try {
     if (message?.type === "checker-status") {
-      sendResponse({ ok: true, result: { status: "ok", mode: "on-device", screen_ocr_supported: false } });
-      return false;
+      self.AlerterThreatIntel.status().then((threat_feed) =>
+        sendResponse({ ok: true, result: { status: "ok", mode: "on-device", screen_ocr_supported: false, threat_feed } }))
+        .catch(() => sendResponse({ ok: true, result: { status: "ok", mode: "on-device", screen_ocr_supported: false } }));
+      return true;
     }
     if (message?.type === "analyze-url") {
-      sendResponse({ ok: true, result: self.AlerterAnalyzer.analyzeUrl(message.url || "") });
-      return false;
+      addThreatIntel(self.AlerterAnalyzer.analyzeUrl(message.url || ""))
+        .then((result) => sendResponse({ ok: true, result }))
+        .catch((error) => sendResponse({ ok: false, error: error.message || "Alerter could not finish this check." }));
+      return true;
     }
     if (message?.type === "analyze-links") {
       const urls = Array.isArray(message.urls) ? message.urls.slice(0, 100) : [];
-      sendResponse({ ok: true, result: urls.filter((url) => String(url || "").trim()).map(self.AlerterAnalyzer.analyzeUrl) });
-      return false;
+      Promise.all(urls.filter((url) => String(url || "").trim()).map((url) =>
+        addThreatIntel(self.AlerterAnalyzer.analyzeUrl(url))))
+        .then((result) => sendResponse({ ok: true, result }))
+        .catch((error) => sendResponse({ ok: false, error: error.message || "Alerter could not finish this check." }));
+      return true;
     }
     if (message?.type === "analyze-email") {
       const email = message.email && typeof message.email === "object" ? message.email : {};
@@ -73,8 +123,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (result.category === "No obvious match") result.category = "Phishing";
         result.signals.push(`Contains ${suspicious.length} link destination(s) with URL warning signs (highest score: ${strongest}/100)`);
       }
-      sendResponse({ ok: true, result });
-      return false;
+      addEmailThreatIntel(result)
+        .then((enriched) => sendResponse({ ok: true, result: enriched }))
+        .catch((error) => sendResponse({ ok: false, error: error.message || "Alerter could not finish this check." }));
+      return true;
     }
     if (message?.type === "analyze-screen") {
       sendResponse({ ok: false, error: "Screen-text scanning is not included in the store edition." });

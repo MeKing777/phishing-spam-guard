@@ -206,10 +206,24 @@ async function updateServiceStatus() {
       screenButton.hidden = true;
       screenHelp.hidden = true;
       const footer = document.getElementById("footer");
-      if (footer) footer.textContent = "Alerter checks page addresses and visible email text on this device. Scan content is not sent to an Alerter server.";
+      if (footer) {
+        const feed = status?.threat_feed;
+        const updated = feed?.available && feed.updated_at
+          ? ` Phishing list refreshed ${new Date(feed.updated_at).toLocaleString()}.`
+          : " The public phishing list refreshes when this extension is online; local URL checks still work if it is unavailable.";
+        footer.textContent = `Page and email content stay on this device.${updated}`;
+      }
       return;
     }
     serviceLabel.textContent = "Local checker on";
+    const footer = document.getElementById("footer");
+    if (footer) {
+      const feed = status?.threat_feed;
+      const updated = feed?.available && feed.updated_at
+        ? ` The community phishing list was refreshed ${new Date(feed.updated_at).toLocaleString()}.`
+        : " The community phishing list updates when online; local checks remain available if it cannot refresh.";
+      footer.textContent = `Message and scan content stay on this computer.${updated}`;
+    }
     if (status?.screen_ocr_available) {
       screenHelp.textContent = "Captures only the visible tab after you click. Text is read and checked on this computer.";
     } else {
@@ -229,7 +243,7 @@ adBlockerButton.addEventListener("click", async () => {
     const response = await chrome.runtime.sendMessage({ type: "set-ad-blocking", enabled });
     if (!response?.ok) throw new Error(response?.error || "Could not update ad-blocking settings.");
     adBlockerButton.setAttribute("aria-checked", String(response.enabled));
-    adBlockerButton.title = "Block common ads and trackers";
+    adBlockerButton.title = "Block ads and known ad pop-ups";
   } catch (error) {
     notice.classList.add("error");
     notice.textContent = error.message || "Could not update ad-blocking settings.";
