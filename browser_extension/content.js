@@ -25,6 +25,8 @@
     [data-google-query-id],ins.adsbygoogle,.adsbygoogle,.ad-slot,.ad-banner,
     .advertisement-banner,.sponsored-ad,[id^="google_ads_iframe"],
     [id^="div-gpt-ad"],[aria-label="Advertisement" i],[aria-label="Sponsored" i],
+    [id*="ad-slot" i],[class*="ad-slot" i],[id*="ad-container" i],[class*="ad-container" i],
+    [id*="advertisement" i],[class*="advertisement" i],[aria-label*="advertisement" i],
     iframe[src*="doubleclick.net" i],iframe[src*="googlesyndication.com" i],
     iframe[src*="adnxs.com" i],iframe[src*="taboola.com" i],
     iframe[src*="outbrain.com" i],iframe[src*="criteo.com" i]{

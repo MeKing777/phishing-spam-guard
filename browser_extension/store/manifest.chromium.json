@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Alerter — Phishing & Spam Protection",
-  "version": "2.1.1",
+  "version": "2.1.4",
   "description": "Checks phishing risks, blocks common ad and pop-up requests, hides recognizable ad slots, and warns about risky sites.",
   "permissions": [
     "activeTab",

@@ -5,6 +5,7 @@
 
   const adHosts = new Set([
     "doubleclick.net", "googleadservices.com", "googlesyndication.com", "adnxs.com",
+    "ag.lockywinder.com", "js.braxybanty.com", "tryembed.us.cc",
     "adsrvr.org", "taboola.com", "outbrain.com", "criteo.com", "adform.net",
     "adroll.com", "revcontent.com", "zedo.com", "popads.net", "popcash.net",
     "propellerads.com", "adcash.com", "trafficjunky.net", "exoclick.com",

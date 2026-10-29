@@ -26,10 +26,11 @@
         "spotx.tv", "spotxchange.com", "taboola.com", "teads.tv", "trafficjunky.net",
         "triplelift.com", "undertone.com", "yieldmo.com", "zedo.com", "zemanta.com",
         "googleadservices.com", "googlesyndication.com", "googletagservices.com",
-        "amazon-adsystem.com", "adsrvr.org", "advertising.com"
+        "amazon-adsystem.com", "adsrvr.org", "advertising.com",
+        "ag.lockywinder.com", "js.braxybanty.com"
       ],
       "resourceTypes": [
-        "script", "image", "sub_frame", "stylesheet", "xmlhttprequest", "media", "ping"
+        "script", "image", "sub_frame", "stylesheet", "xmlhttprequest", "ping"
       ]
     }
   },
@@ -44,9 +45,100 @@
         "adroll.com", "revcontent.com", "zedo.com", "popads.net", "popcash.net",
         "propellerads.com", "adcash.com", "trafficjunky.net", "exoclick.com",
         "hilltopads.net", "adsterra.com", "3lift.com", "pubmatic.com", "smartadserver.com",
-        "bidvertiser.com", "advertising.com"
+        "bidvertiser.com", "advertising.com", "ag.lockywinder.com", "js.braxybanty.com",
+        "tryembed.us.cc"
       ],
       "resourceTypes": ["main_frame"]
+    }
+  },
+  {
+    "id": 3,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*/ads/*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
+    }
+  },
+  {
+    "id": 4,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*/advertising/*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
+    }
+  },
+  {
+    "id": 5,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*/adserver/*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
+    }
+  },
+  {
+    "id": 6,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*/adservice*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
+    }
+  },
+  {
+    "id": 7,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*/pagead/*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
+    }
+  },
+  {
+    "id": 8,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*/gampad/*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
+    }
+  },
+  {
+    "id": 9,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*/adsbygoogle.js",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script"]
+    }
+  },
+  {
+    "id": 10,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*ad-banner*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
+    }
+  },
+  {
+    "id": 11,
+    "priority": 1,
+    "action": { "type": "block" },
+    "condition": {
+      "urlFilter": "*banner-ad*",
+      "excludedRequestDomains": ["yomi.to", "tryembed.us.cc"],
+      "resourceTypes": ["script", "image", "stylesheet", "ping"]
     }
   }
 ]
